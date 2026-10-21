@@ -1,0 +1,225 @@
+---
+name: setup
+description: Set up the iwol plugin in a repository, or re-check a repository that already uses it. Writes .claude/iwol-config.md, the file every iwol skill reads for the repository's checks, reviewer, CI, merge method and releases, migrating an old .claude/beads-config.md; enables the plugin in .claude/settings.json; writes the review workflow stub; and reports what's still missing, such as bd, gh, the worktree ignore rule, the review secrets, and local skill or agent copies to delete. Use when adopting the plugin in a repository, when another iwol skill stops because .claude/iwol-config.md is missing, when the user runs /iwol:setup or says things like "set up iwol", "set up the plugin in this repo", "configure beads for this repo" or "create the iwol config", and to re-check the setup after the repository's tooling changes.
+---
+
+# Setup
+
+Set up a repository to use the iwol plugin, or re-check one that already does. This is the single entry point for adopting the plugin. It writes up to three files, `.claude/iwol-config.md`, `.claude/settings.json` and the review stub `.github/workflows/claude-code-review.yml`, and checks everything else the other iwol skills rely on. It doesn't decompose plans, create beads, open PRs or run anything.
+
+Three rules:
+- **Work it out, don't guess.** Every value comes from a file in the repository, a command's output, or the user. When something can't be determined, ask.
+- **Nothing is saved without the user's yes, and a re-check shows only the differences.** Show each file before saving it. If it already exists, show only what would change, and propose a change only where a value differs in substance, never to reword one that already says the same thing.
+- **Stay in your lane.** Don't install tools, change repository or GitHub settings, set secrets or variables, edit the plugin's skills, delete files or commit. With the user's OK you may write the three files above, rename `.claude/beads-config.md` with `git mv`, and add `.claude/worktrees/` to `.gitignore`.
+
+## Step 1 — Check the plugin and find what's there
+
+- **The plugin is loaded.** Look at the skills and agent types this session offers. The plugin's skills carry an `iwol:` prefix (`iwol:beads-decompose-plan`, `iwol:beads-implement`, `iwol:beads-summary-and-test`, `iwol:beads-pr`, `iwol:grill-me`, this one, and any others it ships). Its eight worker agents are `iwol:bead-<model>-<effort>`, for each `<model>` in `opus`, `sonnet` and each `<effort>` in `low`, `medium`, `high`, `xhigh`; beads-implement dispatches every bead to one of them. If any are missing, the plugin isn't enabled, or this session started before it was. The fix is enabling it (the machine needs the `iwol` marketplace registered, as the tooling repository's README describes, and Step 6 writes the repository's setting), then `/reload-plugins` or a new session. Carry on with the other steps either way, and report it at the end.
+- **Plugin settings.** Read `.claude/settings.json`, if there is one. The plugin is enabled for everyone who clones the repository when it has `"enabledPlugins": {"iwol@iwol": true}`. If it doesn't, propose it:
+  - no file: create one holding only `{"enabledPlugins": {"iwol@iwol": true}}`;
+  - a file without it: merge `"iwol@iwol": true` into its `enabledPlugins`, adding that key if needed, and keep every other key and every other plugin's entry as it is;
+  - a file that isn't valid JSON: show the error and leave it alone.
+
+  Never add `extraKnownMarketplaces`: the marketplace's source differs per machine, a local clone on one and GitHub on another. If the file already has an entry for `iwol` there, point it out and suggest removing it. Also read `.claude/settings.local.json`: `"iwol@iwol": false` there turns the plugin off in this checkout only, so tell the user.
+- **Existing config:**
+  - `.claude/iwol-config.md` exists: this is a re-check. Compare it with what Step 2 finds, and propose only the differences.
+  - Only `.claude/beads-config.md` exists: this is a migration. Step 2 starts from it, and Step 6 renames it with `git mv .claude/beads-config.md .claude/iwol-config.md` (a plain rename if git doesn't track it) before writing the new content, so its history follows.
+  - Both exist: tell the user. Re-check `.claude/iwol-config.md`, take nothing from the old file without asking, and suggest they delete it.
+  - Neither: write a new config from the template.
+- **The marketplace's own repository.** If `.claude-plugin/marketplace.json` at the repository's root names the marketplace `iwol` and lists a plugin `iwol`, this repository hosts the plugin and the shared review workflow. Step 3 writes no stub here.
+- **Local copies of what the plugin ships.** A local copy loads beside the plugin under its bare name, so the session offers two versions of the same skill or agent. Find them, delete nothing, and list them in the report:
+  - in `.claude/skills/`: `beads-decompose-plan`, `beads-implement`, `beads-summary-and-test`, `beads-pr`, `grill-me`, `summary-and-test`, `create-pr` and `create-release`, each only if this session offers the plugin's own `iwol:<name>` (otherwise say the plugin doesn't ship it yet, and it stays); and `beads-setup`, which `/iwol:setup` replaces;
+  - in `.claude/agents/`: bead workers under any naming, such as `bead-opus-xhigh.md` or `bead-worker-high.md`. That's every `bead-*.md`, and any other agent whose description says beads-implement dispatches beads to it.
+
+## Step 2 — Work out the config
+
+Follow the sections of `config.template.md`, in this skill's folder. For each value, note where it came from. When migrating, start from the old file: keep every value in it that still holds, fill in the sections and lines it lacks, rewrite its Review section as below, and reword nothing else. Its old **Merging** line becomes **Merge method** and **Auto-merge**; drop any old text that limits the skills to one merge method.
+
+- **Checks:**
+  - Read the build scripts (`package.json`, `Makefile`, `pyproject.toml` or similar) and the CI workflows (`.github/workflows/`).
+  - The full check is what CI runs, as one local command if the repository has one.
+  - List any other suites CI runs, such as database or end-to-end tests, and when they're needed.
+  - Note anything that hides failures, such as a recursive test run that stops at the first failing package.
+  - **Format** and **Format check:** propose them from the build scripts: the script that rewrites files into the format (`format`, `fmt`, `prettier:write` or similar) and the one that only checks it (`format:check`, `prettier`, `fmt:check` or similar), or the equivalent targets in a `Makefile` or other build file. Write each as a command with the package manager the repository uses (`packageManager` in `package.json`, else the lockfile: `pnpm format`, `npm run format`, `yarn format`). A script that both rewrites and checks, or one you can't tell apart, isn't a match: ask. `none` when the repository has no formatter. Mark them as inferred. For reference: apiece formats with `pnpm format` and checks with `pnpm format:check`; ipunan formats with `npm run format` and checks with `npm run prettier`.
+  - **Post-wave refresh:** propose a command only when the repository shows a derived artifact that a command refreshes, such as a knowledge-graph output directory (`graphify-out/`) with its refresh script or a hook that runs it (ipunan refreshes with `graphify update .`). Name the evidence. Otherwise ask the user, defaulting to `none`.
+  - On a re-check, or a migration whose old file already has these three lines, compare them with what the above finds and show the current values for the user to confirm.
+- **Generated files:**
+  - Look for lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `poetry.lock`, `Cargo.lock`, `go.sum` and the like).
+  - Look for generated code: files with a "generated" header, scripts named like `codegen`, `generate` or `*:types`, and anything CI checks for drift.
+  - For each, record what makes it need rebuilding, the rebuild command, and how to restore the wave branch afterwards.
+  - Note whether CI installs with a frozen lockfile.
+- **Local services:** databases, emulators, Docker Compose files and dev servers. Record how to start each one, anything to know before resetting it, and where ports are documented.
+- **Files to leave alone:** run `git status --short` and ask which of the untracked files are always there.
+- **Review:**
+  - When the repository has the review stub, is getting it (Step 3), or is the marketplace's own repository, the reviewer is the shared review workflow: use the template's Review section as it stands. Fill in the stub's file, the default model and effort (the workflow's own unless the stub sets others), and the review rules file (`AGENTS.md` if the repository has one; otherwise ask). Ask the user whether resolved findings count as clean, unless the existing or old config already says. In the **Clean** line, keep only the approval sentence that matches the stub's `approve` (Step 3; in the marketplace's own repository, the local stub that calls the workflow by its path): the `approve: true` sentence when the stub passes it, otherwise the sentence "Without `approve: true` in the stub, the reviewer never submits a GitHub approval."
+  - When migrating, rewrite the old Review section to the shared workflow's signals the same way. They replace an older reviewer's, such as `@claude review` requests, a summary with a different heading, or a SHA in backticks. Keep anything repository-specific the old section says that still applies.
+  - On a re-check, compare the existing section with the template's in substance only.
+  - If the user keeps a different reviewer and declines the stub, look at recent merged PRs (`gh pr list --state merged --limit 10`), with their reviews, comments and reactions, and record that reviewer's signals under the template's labels: its REST and GraphQL logins, when it reviews and how a review is requested, its in-progress and clean signals and whether it leaves a formal GitHub approval, how findings arrive and how to count rounds, any usage-limit message, and the rules file it follows. Ask the user what the history doesn't show. If no bot reviews PRs, write "Reviewer: none".
+- **CI** and **Releases:** read what the repository shows, propose it marked as inferred, and ask only for what it doesn't show. Explain each line you ask about with the template's wording. On a re-check, or a migration whose old file already has them, compare the current values with what's found and show them for the user to confirm.
+  - CI: list `.github/workflows/` and read each workflow's `on:` triggers and `jobs:`. The workflows that run on `pull_request` are the candidates; propose the gating one and the job or jobs a PR has to pass (apiece: `ci.yml`, jobs `check` and `database`; ipunan: `ci.yml`, job `check`), using each job's `name:` as the check shows it, or its job ID when it has none. Leave out the review stub (`claude-code-review.yml`), any workflow that calls the shared review workflow (`it-works-on-local-dev/tooling/.github/workflows/claude-code-review.yml`, or `./.github/workflows/claude-code-review.yml` in the marketplace's own repository), and any workflow that only labels, comments or releases. If several workflows could gate, say which you chose and why, and ask. A job that calls a reusable workflow shows as `<job> / <inner job>`: give the name as the PR's checks list it. "CI: none" if no workflow runs on PRs.
+  - `Runs on`: `picker` exactly when a workflow job `uses:` or needs `pick-runner.yml` from `it-works-on-local-dev/runners` (the gating workflow calls the picker, or the jobs' `runs-on:` reads a picker job's output). Look at the gating CI workflow the CI line names and its jobs, and follow the local reusable workflows those jobs call (`uses: ./.github/workflows/…`) for the picker too: a review workflow that calls the picker doesn't count. `hosted` only when every gating job's `runs-on:` names GitHub-hosted runners (`ubuntu-latest` and the like). When a gating job's `runs-on:` names `self-hosted`, or any label that isn't GitHub-hosted, ask instead of proposing `hosted`.
+  - `Recovering a stuck run`: where the repository's docs (`AGENTS.md`, `CLAUDE.md`, `docs/`, `README`) say how to recover a stuck or queued CI run, such as a CI runners section. If they don't say, ask, defaulting to `none`.
+  - `Waiting for CI`: the template's wait loop with the gating workflow's file name filled in; nothing to ask.
+  - Releases: when a workflow has a step that `uses:` an action ending in `/release-please-action` (under `googleapis/` or `google-github-actions/`) or runs the `release-please` CLI, or the repository has a `release-please-config.json` or `.release-please-manifest.json`, propose what can be read, marked as inferred. Read the config from the action's `config-file` input (`release-please-config.json` by default); with no config file, the action's `release-type` input stands in for it:
+    - the Release PR branch: release-please names it `release-please--branches--<base branch>` (the action's `target-branch` input, when it sets one, in place of `<base branch>`), plus `--components--<component>` for the root package's component: the `component` key when the config has one (top-level, or on a single package in `packages`), otherwise the component release-please defaults to for the release type (for `node`, `package.json`'s `name` without its `@scope/`). Confirm it against past Release PRs' head branches (`gh pr list --state all --search "head:release-please" --json headRefName`), and ask when they disagree or there are none. With several components or packages, ask which one the skills drive;
+    - the release workflow and the deploy workflow from `.github/workflows/`: the one with a step that `uses:` an action ending in `/release-please-action` (under `googleapis/` or `google-github-actions/`) or runs the `release-please` CLI is the release workflow (when a config file exists but no workflow matches, ask which workflow releases); the one triggered by a tag push (`on: push: tags`) or by the release being published is the deploy workflow;
+    - the migration directories that exist (`prisma/migrations`, `migrations/`, `db/migrate`, `supabase/migrations` and the like), or `none` when there are none.
+
+    Ask for the rest: the production version URL and the shape of its response, what gates the deploy (propose what the deploy workflow shows, such as jobs it `needs:` or steps it runs first, and have the user confirm), and where rollback is documented (propose a docs heading that mentions rollback, if one exists). With no release-please workflow, config file or manifest and no workflow that looks like a release flow, propose `Releases: none`. If the repository releases some other way (another release tool, a manual tag, a publish workflow), tell the user the Releases section only describes release-please flows, and ask what to record: `none`, or a short description of their flow.
+- **Git and GitHub:**
+  - **Base branch:** `gh repo view --json defaultBranchRef`.
+  - **Worktree setup:** look for a section in the repository's instructions (`AGENTS.md`, `CLAUDE.md`, `docs/`) on preparing a new worktree, such as installing dependencies, copying env files or generating code, and ask the user to confirm it. `none` if there isn't one. `/iwol:start` and `/iwol:beads-implement` follow it in each worktree they create. Clean-up isn't asked for: `/iwol:create-pr` removes a merged PR's worktree itself. An old config's **Worktree setup and clean-up** line becomes this line, keeping its pointer only if that section covers setup.
+  - **Merge method:** `merge` or `squash`; the skills never rebase-merge. Work it out from four things:
+    1. Which merge methods GitHub allows: `gh api repos/{owner}/{repo} --jq '{allow_merge_commit, allow_squash_merge, allow_rebase_merge, delete_branch_on_merge}'`.
+    2. Whether the base branch requires linear history. That rules out `merge`, since a merge commit isn't linear, but not `squash`. Check both:
+       - rulesets: `gh api repos/{owner}/{repo}/rules/branches/<base> --jq '[.[].type]'`, looking for `required_linear_history`;
+       - branch protection: `gh api repos/{owner}/{repo}/branches/<base>/protection --jq .required_linear_history.enabled`.
+
+       A 404 from the protection call means the branch isn't protected. A 403 saying the plan doesn't include the feature means no such rule can exist.
+    3. Which methods the base branch's rulesets allow. A `pull_request` rule ("Require a pull request before merging") has its own `allowed_merge_methods`, which can forbid `merge` or `squash` even when the repository settings allow it: `gh api repos/{owner}/{repo}/rules/branches/<base> --jq '.[] | select(.type == "pull_request") | .parameters.allowed_merge_methods'`. Drop any method it doesn't list. No `pull_request` rule, or one without the parameter, limits nothing. If the call is refused, say so and don't treat the methods as unrestricted.
+    4. How recent PRs landed on the base branch itself, not on whatever is checked out: `git fetch origin`, then `git log origin/<base> --first-parent --merges --format=%s -5` for merge commits and `git log origin/<base> --first-parent --no-merges --format=%s -10` for single commits, where a PR squashed on GitHub ends its subject with ` (#<n>)` by default. `--first-parent` leaves out merges that happened inside feature branches, such as "Merge main into feature".
+
+    If only one of `merge` and `squash` is left after the first three, that's the method. If both are, recent history decides when it's consistent; ask when it's mixed, when there's none, or when it disagrees with an old config. If neither is (only rebase merges allowed, or linear history required with squash merges off), tell the user the skills can't merge here as written. Then:
+    - for `merge`, the subject and body format, from the recent merge commits (`git log origin/<base> --first-parent --merges --format='%s%n%b%n--' -5`); confirm it with the user;
+    - for `squash`, whether GitHub deletes branches: `delete_branch_on_merge` true gives "GitHub deletes the branch on merge", false gives "the skill passes `--delete-branch`".
+  - **Merge queue:** the skills merge each PR directly and never use auto-merge, so a merge queue on the base branch doesn't fit them. Check with `gh api graphql -F owner='{owner}' -F name='{repo}' -f query='query($owner:String!,$name:String!) { repository(owner:$owner, name:$name) { mergeQueue(branch:"<base>") { id } } }'`. Anything other than `null` means the base branch has one; tell the user the merge stage won't work here as written.
+  - **PR title format:** ask the user: `free`, or `conventional commit` (titles like `feat: …`, usually because release-please builds the changelog from them). On a re-check, show the current value and ask the user to confirm it.
+  - **Merge order:** rules such as database migrations by timestamp. Ask the user.
+  - **Auto-merge:** always `never`.
+
+  If there's no GitHub repository to ask (no `origin`, or `gh repo view` fails), say so, take these values from the old config or the user, and mark them unconfirmed.
+
+## Step 3 — Work out the review stub
+
+**In the marketplace's own repository, skip this step.** There `.github/workflows/claude-code-review.yml` is the reusable review workflow itself, and the repository reviews its own PRs through a separate local stub that calls it by its path (`uses: ./.github/workflows/claude-code-review.yml`). Write, replace and propose nothing for either; report that the stub doesn't apply here.
+
+Everywhere else, the stub is `.github/workflows/claude-code-review.yml`, from *Review stub* below. First check what's there:
+
+- **That file calls `it-works-on-local-dev/tooling/.github/workflows/claude-code-review.yml`:** this is a re-check of the stub. Compare its inputs and its `secrets:` with what this step works out, and also its workflow `name:` and the `review` job's `name:` with the stub below. Propose only the differences, including `Code Review` and `Claude` where they differ, so the stub's check is `Claude / review`, the name the config uses. If the user declines the change, the existing job's `name:` (or its job ID when it has none) replaces the `Claude` prefix in every check name in the config's Review section (`<job name> / review`, `/ request`, `/ runner / …` and `/ checks`), and its workflow `name:` replaces `Code Review` in the UI name.
+- **It's a full review workflow of its own**, with its own steps rather than one job calling the shared workflow: say the stub will replace it, and ask before going on. Its commands for installing, formatting, linting and type checks are a good source for the `checks` snippet.
+- **Another workflow already calls the shared workflow** (`grep -l 'it-works-on-local-dev/tooling/.github/workflows/claude-code-review.yml' .github/workflows/*`): say so and ask. A second caller would review every PR twice. If you keep that caller, its job's `name:`, or its job ID when it has none, sets the check names (`<job name> / review`), so that name replaces the `Claude` prefix in every check name in the config's Review section (`<job name> / review`, `/ request`, `/ runner / …` and `/ checks`), and its workflow `name:` replaces `Code Review` in the UI name. Check its `secrets:` as the `secrets:` item below says, but only report what differs: that file isn't one this skill writes.
+
+Then work out the inputs:
+
+- **`package-manager`:** `pnpm` when `package.json`'s `packageManager` field starts with `pnpm@`, otherwise `npm`. If the field names another package manager, or there's a `pnpm-lock.yaml` without the field, tell the user and ask: the workflow sets up only npm and pnpm.
+- **`node-version-file`:** leave it out when `.nvmrc` exists, since that's the default. Otherwise ask which file holds the Node version, such as `.node-version`. The workflow sets Node up from it, so the file must exist.
+- **`exclude-paths`:** ask which paths to leave out of the diffs the reviewer reads, one per line, such as generated output like `graphify-out`. Offer the generated directories from the config's Generated files as candidates. Leave the input out when there are none.
+- **`checks`:** propose a snippet from the repository's own scripts, or the old review workflow's commands, and ask the user to confirm or change it. Each line is `run_step <setup|check> <name> <command…>`, with `<name>` a single word, since it names the step's output file. A name may use only letters, digits, `.`, `_` and `-` (no `:`, `/` or spaces, so `format-check` rather than `format:check`). Each `<name>` must be unique across the snippet and must not be `summary`: the workflow reports a bad name, a repeated name, or `summary`, as a FAIL line and skips the step.
+  - Each `run_step` line wraps exactly one simple command, because the workflow runs `"$@" > "$CHECKS_DIR/<name>.txt"`. Use no `&&`, pipes, redirects or `VAR=value` prefixes. `run_step check full actionlint && claude plugin validate .` wraps only `actionlint`: the second command runs outside `run_step`, gets no summary line, and if it fails the step's `bash -e` stops the checks there: `full` still reads pass, and the steps after it show as unavailable. `run_step setup gen FOO=1 npm run gen` runs `FOO=1` as the command and fails. Split a compound command into separate steps, wrap it as `bash -c '…'`, and `export` variables at the top of the snippet.
+  - `setup` steps prepare the checks: installing (`npm ci`, or `pnpm install --frozen-lockfile`) and generating code the checks need. They add a summary line only when they fail.
+  - `check` steps are what the reviewer reads instead of guessing at formatting, lint or type errors: usually the format check, lint and typecheck, as CI runs them. Each always adds a pass or FAIL line. Leave tests to CI unless the user wants them here.
+  - If a step needs environment variables, such as a dummy database URL for code generation, `export` them at the top of the snippet. The checks job has no secrets, so never put a real one there.
+- **`review-app-client-id`:** always `${{ vars.REVIEW_APP_CLIENT_ID }}`.
+- **`secrets:`:** always the block in *Review stub* below, which passes by name the three secrets the shared workflow declares under `on.workflow_call.secrets`: `CLAUDE_CODE_OAUTH_TOKEN`, `REVIEW_APP_PRIVATE_KEY` and `RUNNER_STATUS_TOKEN`. Pass `RUNNER_STATUS_TOKEN` even when the repository doesn't have it: it reads as empty, the runner picker falls back to GitHub-hosted runners, and Step 5 reports it. Never write `secrets: inherit`: the stub calls the workflow at the mutable `@main` ref, and `inherit` would hand it every repository and organisation secret, not just these three. On a re-check:
+  - `secrets: inherit`, the form stubs had before: it still works, so it isn't a failure. Propose the block, saying it keeps the repository's other secrets away from a workflow called at `@main`. If the user declines, leave it and say so in the report.
+  - A block that leaves out `CLAUDE_CODE_OAUTH_TOKEN` or `REVIEW_APP_PRIVATE_KEY`, or passes a secret the workflow doesn't declare: GitHub refuses to start the review, so propose the block.
+  - A block without `RUNNER_STATUS_TOKEN`: reviews run only on GitHub-hosted runners. Propose adding it.
+  - A block that reads one of the three from a secret of another name, such as `CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_TOKEN }}`: keep that mapping, and check that name in Step 5.
+- **`default-model`** and **`default-effort`:** leave them out, so the workflow's `opus` (an alias for the newest Opus model the workflow's Claude Code knows) and `xhigh` apply, unless the user wants others.
+- **`approve`:** ask whether a clean review should also approve the PR, defaulting to no. The question's own text must say that the approval is only a visible signal, on any plan: whoever writes a PR can obtain it, so it must never count toward required reviews (a private repository on GitHub's Free plan can't require approvals anyway). Keep that in the question itself, not only in text around it, so it still shows when the questions are asked together in one form. With `approve: true`, a clean review submits a GitHub approval on the head it reviewed, and a later review that isn't clean dismisses it; a push leaves the approval in place until the next review. Write `approve: true` only when the user turns it on, and leave the input out otherwise. On a re-check, compare the stub's `approve` with the answer like any other input.
+- **The `pull_request` trigger's branch** is the config's base branch.
+
+## Step 4 — Check the tools
+
+- **`bd`:** installed and set up in this repository. Run `bd info`, and tell the two failures apart:
+  - *Command not found:* `bd` isn't installed. Point the user to the beads (`bd`) installation instructions; `bd init` can't help until it's installed.
+  - *Installed, but no database here:* tell the user to run `bd init` in the repository.
+
+  Then check that it has the commands and flags the skills use, since an older `bd` can pass `bd info` and still fail later:
+  - `bd create --help` lists `--no-inherit-labels`;
+  - `bd update --help` lists `--external-ref`;
+  - `bd reopen --help` lists `--reason`;
+  - `bd comments --help` lists `--json`;
+  - `bd children` and `bd dep add` exist.
+
+  If anything's missing, tell the user to upgrade `bd`.
+- **`gh`:** signed in with access to this repository (`gh auth status`, `gh repo view`). The skills fetch and push through the `origin` remote but call GitHub through `gh`'s default repository, so those must match. Compare `gh repo view --json nameWithOwner` with `git remote get-url origin` and `git remote get-url --push origin`, and stop if they point to different repositories.
+- **Worktrees:** `.claude/worktrees/` must be in the tracked `.gitignore` (`git check-ignore --no-index -v .claude/worktrees/probe`). If it isn't, offer to add it.
+
+## Step 5 — Check the review secrets and app
+
+Skip this when there's no GitHub repository, and say so.
+
+- **Read only names, never values.** Repository secrets: `gh secret list --json name --jq '.[].name'`. Repository variables: `gh variable list --json name --jq '.[].name'` (a plain `gh variable list` prints values too). Organisation secrets and variables shared with this repository: `gh api repos/{owner}/{repo}/actions/organization-secrets --jq '.secrets[].name'` and `gh api repos/{owner}/{repo}/actions/organization-variables --jq '.variables[].name'`. If a call is refused, say which list you couldn't read instead of calling its names missing.
+- **Report which of these are set and which are missing:**
+  - secret `CLAUDE_CODE_OAUTH_TOKEN`, required;
+  - secret `REVIEW_APP_PRIVATE_KEY`, required;
+  - secret `RUNNER_STATUS_TOKEN`, optional: without it the runner picker falls back to GitHub-hosted runners;
+  - variable `REVIEW_APP_CLIENT_ID`, required.
+
+  Where the stub's `secrets:` reads one of the secrets from another name (Step 3), check that name instead. For each missing one, give the user the command to run themselves (`gh secret set <name>`, or `gh variable set REVIEW_APP_CLIENT_ID --body <the review app's client ID>`), with the values the org's other repositories use. Never set one yourself, and never ask for a value in the session.
+- **The `iwol-reviewer` GitHub App must be installed on the repository.** `gh`'s token can't check that reliably. If a recent PR here has a comment from `iwol-reviewer[bot]`, it's installed; otherwise ask the user to check (the organisation's settings, GitHub Apps, `iwol-reviewer`, repository access).
+
+## Step 6 — Show, save and hand over
+
+1. Show what you'd write, file by file, marking the values you inferred rather than read directly and anything the user should confirm:
+   - the config: in full when it's new, the rename and the new content when migrating, only the differences on a re-check;
+   - `.claude/settings.json`, as the whole file would read;
+   - the stub, unless Step 3 was skipped;
+   - the `.gitignore` line.
+
+   Save each on the user's yes; one yes can cover several if the user says so. When migrating, run the `git mv` first, then write the new content.
+2. Report what's ready and what's missing:
+   - whether the plugin is loaded, and if not, why and the fix;
+   - each file, written or left as it was;
+   - `bd`, `gh` and the worktree ignore rule;
+   - the review secrets, the variable and the app, and a stub the user kept on `secrets: inherit`;
+   - anything that stops the merge stage working as written: no usable merge method, or a merge queue;
+   - the local copies to delete, with the commands (`git rm -r .claude/skills/<name>`, `git rm .claude/agents/<file>`), and that anything pointing at them, such as instructions or tests that read `.claude/skills/` or `.claude/agents/`, needs updating too.
+3. If the plugin wasn't loaded, tell the user to run `/reload-plugins` or start a new session once it's enabled: agent definitions only load when a session starts.
+4. Suggest committing the config, the settings, the stub and the `.gitignore` change together, along with deleting the local copies. Don't commit.
+5. Give the next steps:
+   - `/iwol:grill-me` to settle a plan's open questions, if it has any;
+   - `/iwol:beads-decompose-plan <path to plan>`, once per plan;
+   - then for each wave: `/iwol:beads-implement <sub-epic id>`, `/iwol:beads-summary-and-test <sub-epic id>` in a new session, and `/iwol:beads-pr <sub-epic id>` in a new session each time until the wave closes;
+   - for work that isn't a wave: `/iwol:start <description>`, from a session started in the main checkout, to give it its own named worktree, then `/iwol:summary-and-test` to test it and `/iwol:create-pr` to ship it;
+   - any other `iwol:` skills this session offers, such as `/iwol:create-release`.
+
+## Review stub
+
+`.github/workflows/claude-code-review.yml`. Fill in the base branch, the package manager and the `checks` snippet. Leave out `exclude-paths` when there are none, and add `node-version-file`, `default-model` or `default-effort` under `with:` only as Step 3 says. Add `approve: true` under `with:` only when the user turned approvals on.
+
+```yaml
+# Claude reviews this repository's pull requests through the org's shared
+# workflow in it-works-on-local-dev/tooling. Written by /iwol:setup.
+name: Code Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+    branches: [<base branch>]
+  # A comment line starting "/review [model] [effort]" asks for a fresh review
+  issue_comment:
+    types: [created]
+
+jobs:
+  review:
+    name: Claude
+    # The workflow posts through the review app's own token
+    permissions:
+      contents: read
+    uses: it-works-on-local-dev/tooling/.github/workflows/claude-code-review.yml@main
+    # Only the secrets the workflow declares, not every repository and organisation secret
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      REVIEW_APP_PRIVATE_KEY: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+      RUNNER_STATUS_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+    with:
+      package-manager: <npm or pnpm>
+      review-app-client-id: ${{ vars.REVIEW_APP_CLIENT_ID }}
+      exclude-paths: |
+        <path>
+      checks: |
+        run_step setup install <install command>
+        run_step check <name> <command>
+```
+
+## Non-goals
+
+- Don't decompose plans, create beads, open PRs or run waves.
+- Don't install tools, change repository or GitHub settings, set secrets or variables, or add any workflow other than the review stub.
+- Don't write a stub in the marketplace's own repository.
+- Don't put skills or agents into the repository: the plugin ships them. Local copies are listed for the user to delete, not deleted.
+- Don't guess the CI, Releases, format or refresh lines: read them from the repository, mark them as inferred, and ask for what it doesn't show.
+- Don't edit the plugin's other skills; anything specific to the repository belongs in the config.
+- Don't save anything without the user's yes, and don't commit.

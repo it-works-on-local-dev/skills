@@ -1,0 +1,406 @@
+---
+name: beads-pr
+description: Take a tested wave to merged pull requests, one PR per bead, then close the wave's sub-epic. Covers splitting the local wave branch into per-bead branches, opening the PRs, triaging review comments and CI failures across them, sending fixes through beads-implement's fix mode, replying to and resolving every thread, syncing with main, merging, and closing the wave once every bead's PR has merged. Use after /iwol:beads-summary-and-test, or when the user runs /iwol:beads-pr <sub-epic-id> or says things like "open the PRs for this wave", "handle the review", "address the review comments", "is the wave ready to merge", or "merge the wave". Always use this skill for a wave's PRs — do not open, fix, or merge them ad hoc.
+---
+
+# Beads PR
+
+Take one tested wave from the local wave branch to merged pull requests, then close the wave. Each bead gets its own PR, because small PRs get thorough reviews. Wave-sized PRs of tens of thousands of lines have needed four to six review rounds each, because no single review covered them. A wave is finished only when every bead's PR has merged and its sub-epic is closed.
+
+Each run moves the wave's PRs forward and then ends. You run it again for the next step — ideally in a new session. Every run rebuilds its picture from git, GitHub and `bd`, so it never needs an earlier session's conversation. That's the point: a review round should start from a small context, not from the 300k–600k tokens an implementation or testing session ends with.
+
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone, the PR reviewer and how it signals, and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. Its Git and GitHub section says how PRs merge (`Merge method: merge` or `Merge method: squash`) and how they're titled (`PR title format: free` or `PR title format: conventional commit`). If either line is missing, as in a config written before they existed, stop and ask the user to run `/iwol:setup` to add it. Don't assume a method or a format. Below, "the reviewer" means the review bot the config names. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
+
+Two rules define the role. First, **you write no implementation code and dispatch no sub-agents.** Fixes go through beads-implement's fix mode. Your job is committing, splitting, pushing, triage, replies, review requests, merging and closing. Second, **nothing merges without the user's explicit yes in the current run.**
+
+## Branches
+
+- **Wave branch** `feature/<sub-epic-id>-<title>`: local only, **never pushed**. beads-implement creates it, and it holds the whole wave, tested together. Every code change lands here first: the original work and every fix round. Every check and re-test runs here.
+- **Bead branches** `feature/<bead-id>-<title>`: one for each bead that changed files. Each is cut from `main` and pushed, and gets one PR against `main`. It carries only that bead's files, copied from the wave branch.
+- **Beads stand alone.** Beads in a wave don't depend on each other and don't share files, so each bead branch works on `main` by itself. CI on its PR checks exactly that.
+- **Who owns which file:** each bead's `Files:` comments, written by beads-implement, list the files it owns. Only beads whose PRs haven't merged own files; once a bead's PR merges, its files are on `main` and a later bead, such as a repair bead, can take them over. Two cases need special handling:
+  - **Generated files**, marked `(generated)` and listed in the config. Never copy them; rebuild them on the bead branch after copying its other files, with the config's rebuild command. Back on the wave branch, restore its state with the config's restore command for each file you rebuilt.
+  - **A file listed by two beads**, usually a doc. Give each bead branch only its own hunks, using the beads' descriptions to tell whose is whose. Ask the user if a hunk is unclear.
+- **Run every session for a wave in the worktree that holds the wave branch**, `.claude/worktrees/<sub-epic-id>-<title>`, where beads-implement checks it out. Git lets a branch be checked out in only one worktree, so a session elsewhere can't switch to it. Once the sub-epic resolves, enter that worktree as *Entering one* in `../start/worktrees.md` says, unless this session is already there. A wave started before waves had their own worktrees may be in the main checkout; *Entering one* then stops and tells the user to run from there.
+- **Fetch first.** Whenever a step uses `origin/main` (merging it, branching from it or comparing with it), run `git fetch origin` immediately before, so it isn't stale.
+- **Keep the wave branch current.** After any bead PR merges, and before copying files from the wave branch onto any bead branch, merge `origin/main` into the wave branch. Copying a whole file from a stale wave branch would quietly undo changes `main` made to it since. If the merge brings in changes to any of the wave's files, rebuild generated files and re-run the config's checks before copying anything. If a bead branch has commits that didn't come from the wave branch (pushed by hand), merge them into the wave branch before changing anything. If merging `origin/main` into the wave branch conflicts, under either merge method, follow the conflict rule in *Sync with main*.
+
+### Branch and worktree names
+
+- **Branches:** `feature/<bead-id>-<title>`. For a wave's branch, `<bead-id>` is the sub-epic's ID.
+- **Worktrees:** `<bead-id>-<title>`, under `.claude/worktrees/` (git-ignored in this repo), for any worktree made for a wave or a bead. Work that isn't a wave gets `<prefix>-<description>` from `/iwol:start` (see `../start/worktrees.md`). Worktrees the desktop app makes for its own sessions keep the app's names.
+- **`<title>`** is the bead's title in lowercase, with every run of characters other than a–z and 0–9 turned into one hyphen, no hyphen at either end, and cut at a hyphen to 40 characters or fewer. For a sub-epic, leave out the leading `Wave <n> —`.
+- **Examples:**
+  - wave `acme-v1.6`, "Wave 6 — Group data and balances": branch `feature/acme-v1.6-group-data-and-balances`, worktree `.claude/worktrees/acme-v1.6-group-data-and-balances`;
+  - bead `acme-v1.6.2`, "Build the web link session layer: server loading": branch `feature/acme-v1.6.2-build-the-web-link-session-layer-server`.
+- **Find branches by ID**, never by working out the title again: a title can change after its branch exists. The wave branch is `git branch --list 'feature/<sub-epic-id>-*'`, which doesn't match its beads' branches; a bead branch is its PR's `headRefName`.
+
+## Step 0 — Require the sub-epic ID (hard stop)
+
+If no bead ID is in the conversation or the command args, stop and ask for it. Don't guess from the branch name or recent PRs.
+
+- **Sub-epic** (a wave) — the normal case.
+- **Epic** — stop, list its sub-epics with their status, and ask which wave.
+- **Leaf bead** — stop. Runs cover a whole wave; ask for the sub-epic ID.
+- **Doesn't resolve** — say so and stop.
+
+Once it resolves to a sub-epic, name the session `[<sub-epic id>] pr-<n>`, where `<n>` numbers this run among the wave's `beads-pr` runs. Count the sub-epic's comments that start `PR session ` (`bd comments <sub-epic-id> --json`): `<n>` is one more. Add `bd comments add <sub-epic-id> "PR session <n>"`, so the next run counts this one, even where the session can't be renamed. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. If this session already ran this skill for the same sub-epic, keep its number: add no comment and don't rename.
+
+Then move into the wave branch's worktree (see *Branches*), before reading any state from git. If the wave branch is already gone, as after a clean-up that stopped partway, enter the wave's worktree if `git worktree list` still shows `.claude/worktrees/<sub-epic-id>-<title>` (match it by `<sub-epic-id>-`), so *Clean up* removes it as this session's own. If neither is there, stay where you are.
+
+## Step 1 — Read the state
+
+Gather everything fresh:
+
+- The sub-epic and its child beads: status and comments (`bd show`, `bd children`, `bd comments <id>`), and each bead's files.
+- **Open findings**: `Finding` comments on the wave's beads with no later `Resolved <id>`, `Deferred <id>` or `Declined <id>` comment (see *Finding comments*).
+- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, and ask whether to go on.
+- **Re-test list**: steps named in `Re-test needed` comments on the sub-epic, plus steps the test plan marks `blocked` or `not run`. Leave out any step a later `Re-tested` comment covers.
+- The wave branch and working tree: current branch, uncommitted changes.
+- **Each bead's PR**, from the bead's external ref `gh-<n>`, set when its PR opens.
+  - If a bead has no ref, look for a PR on its bead branch (`gh pr list --head <bead-branch> --state all`), in case an earlier run opened one but didn't record it. Record any you find.
+  - If a bead's PR has merged but the bead has no `Merged in PR` comment (a run stopped after the merge, or someone merged it on GitHub), add it as the Merge stage would, taking the commit from `gh pr view <n> --json mergeCommit --jq .mergeCommit.oid`. Sync with main and Merge read the commit from that comment.
+  - If a bead's PR was closed without merging, ask the user whether to reopen it (`gh pr reopen <n>`) or open a replacement from the same branch, then record the PR you end up with.
+
+  For each open PR, gather:
+  - its state, head commit, and whether it conflicts with `main` (GraphQL `mergeable`). `UNKNOWN` means GitHub is still working it out, so read it once more before relying on it;
+  - CI on the head, read once;
+  - its review threads;
+  - the reviewer's reviews and signals (see the config), plus any message from it saying its usage limit is reached;
+  - its **review round**: the number of reviews the reviewer has given it so far, with a clean signal counting as one.
+
+Then work through these in order, doing every one that applies. One run can move different PRs through different steps.
+
+1. **Sub-epic closed:** if any of the wave's branches or worktrees are still there, do **Clean up**. Otherwise say the wave is already done and stop.
+2. **The wave branch has no commits of its own yet** (the first run): commit the wave's work on it as `Wave <n>: <summary>`, with a body bullet per bead.
+   - Stage only the files in the beads' `Files:` comments, and check the staged diff for keys or tokens.
+   - Leave unrelated files alone, including the always-untracked files the config lists.
+   - Ask the user about any changed file that no bead lists.
+
+   This commit stays local. Doing it first means a fix round's changes can be told apart from the wave's.
+
+   On later runs, uncommitted changes to tracked files aren't the wave's original work; they're left over from an interrupted fix round. Show them to the user and ask what to do with them before anything else.
+3. **Open findings on beads that aren't `blocked`:** do the **Fix round**. Blocked beads wait for the user (see *Blocked beads* below).
+4. **A bead that changed files has no PR yet** (and isn't `blocked`): do **Open the PRs** for those beads. This covers the first run, an attempt that stopped partway, and a blocked bead that has since been sorted out. If no PRs existed before this step, end the run; otherwise carry on with the existing PRs.
+5. **A bead PR is missing a change the wave branch has.** For each open bead PR, run `git diff origin/<bead-branch> <wave-branch> -- <the bead's own files>`, leaving out generated files. For a file shared by hunk, check instead that the bead branch has each of this bead's hunks exactly as the wave branch has them. Any difference means a fix never reached the PR, for example because a push failed after fix mode had already closed the bead. Do the per-bead part of **Fix round** step 6 for it: copy, rebuild generated files, commit, push, and request a review.
+6. **A PR conflicts with `main`, a generated file on it is stale after another bead merged, or its bead has a `Waits for <bead-id>` comment and the PR's branch doesn't have that bead's merge yet (its `Merged in PR` comment names the commit):** do **Sync with main** for it.
+7. **A PR has a thread that is unresolved or has no outcome reply, unanswered feedback outside threads, or failing CI on the head:** do **Triage**, covering every such PR together. Then do the **Fix round**.
+8. **A PR was pushed after it opened, with no review request since:** request a review, if the reviewer needs requests (see *Review requests*).
+9. **A PR is clean:** do **Merge**.
+10. **Every bead's PR has merged:** do **Close the wave**.
+
+**Blocked beads:** if a child bead is `blocked`, report it with its comment, and any changes set aside for it (`git stash list`). Its work failed checks, so it gets no PR until the user resolves it, and the wave can't close until then. Carry on with the other beads.
+
+End with one line per PR: its number, its bead, and where it stands, for example "waiting on review", "CI running", "reviewer usage limit", "waiting for <bead-id> to merge", "ready to merge" or "merged".
+
+**Do not wait, poll, sleep or schedule a wake-up** for the reviewer or CI. Report what's pending and tell the user to run `/iwol:beads-pr <id>` again, in a new session, once it has landed.
+
+## Stage — Triage
+
+Collect, across all the wave's open PRs:
+- every review thread (the reviewer's or a person's) that is unresolved or has no outcome reply yet (see *Every thread gets a reply and a resolution*);
+- feedback outside threads that has no outcome reply yet: review bodies and PR conversation comments that raise a problem or ask for a change. That includes a reviewer review body carrying a finding, not just its standard header. Leave out review requests, your own footer-signed comments, and bot notices that ask for nothing;
+- every failing CI check on a PR's head, with the failing part of its log. Leave out a check that a `Waits for` comment on the PR's bead covers while the PR of the bead it names hasn't merged.
+
+For each item, check it against the actual code and against the review rules the config names. Note the reviewer's priority label, if it gives one. Also note whether the problem existed before the fixes or was introduced by one; the review rules may ask the reviewer to say which on re-reviews. The bead an item belongs to is the bead whose PR it's on. Look across the PRs too: the same symptom on several of them, or a cause an item names in a file outside its bead's files, may be one shared cause (see *Shared causes*). Sort each item:
+
+- **Fix** — valid, in this bead's scope, and fixable within this bead's own files (its `Files:` comments, plus new files). If the fix would need another bead's file, or would make this bead's code depend on another bead's code that isn't on `main` yet, say so in the triage. That's an undeclared dependency between sibling PRs, and the owner decides: fix it in both PRs and merge them together, defer it, or decline it. Don't send it to a fix round as an ordinary Fix.
+- **Repair** — valid, but its cause is in shared code no bead owns (see *Shared causes*), so a fix in this bead's files could only work around it. Group it with the other items and open findings that share the cause, and offer one repair bead for the group.
+- **Defer** — valid, but it belongs to a later bead. Name that bead. A failing check can't go to a later bead: it blocks this PR's merge until it passes, and the later wave can't start until this one closes.
+- **Decline** — not valid, or a deliberate choice (for example, something the review rules say is intentional). Give the reason. This applies to review threads only: a failing check blocks the merge until it passes.
+- **Re-run** — a failing check caused by flaky infrastructure, a timeout or a cancellation, not by the code. With the user's OK, re-run its failed jobs (`gh run rerun <run-id> --failed`). If it fails the same way again, treat it as a Fix.
+
+**Round budget.** From a PR's third review on (two fix rounds already), recommend this split:
+
+- Fix the highest-priority issues (P1, if the reviewer uses P1–P3) and problems that earlier fixes introduced.
+- Defer older, lower-priority issues to a later bead, or to a new follow-up bead.
+
+Loops of 4–6 rounds came from fixing everything every time. The user decides, as with all triage.
+
+Show the user the triage as one short list grouped by PR: item, priority, before or after the fixes, bucket, one-line reason. List each repair group once, after the PRs: the cause, the shared file, the items it covers on each PR, and the repair bead's labels. Wait for their go-ahead. They may move items between buckets. Deferring and declining are their decisions, not yours.
+
+Then act on it:
+
+- **Fix** items: add a `Finding` comment to the PR's bead. Then do the **Fix round** in this same run.
+- **Repair** items: create the repair bead and defer the items to it, replying on each thread and resolving it, as in *Shared causes*. The repair bead goes into the **Fix round** in this same run.
+- **Defer** items: add a comment on the later bead starting `Deferred from PR #<n> review:`, written so it stands alone (what to change, why, the thread URL). With the user's OK, you can instead create a follow-up bead in a later open wave. Use `bd create --parent <that sub-epic> --no-inherit-labels` with `agent:`, `effort:` and kind labels, and check that it shares no files with that wave's beads. Then reply on the thread and resolve it.
+- **Decline** items: reply on the thread and resolve it.
+- **Re-run** items: re-run the failed jobs, and check the result on the next run.
+
+If triage leaves nothing to fix on a PR, nothing is pushed there and no new review is requested. Once every thread on it has its reply and is resolved, that PR can go to **Merge** on the reviewer's existing review.
+
+### Every thread gets a reply and a resolution
+
+Each review thread on a PR ends with one reply from you that states its outcome, followed by resolving the thread. No exceptions: never resolve a thread without a reply, and never leave a replied-to thread unresolved.
+
+- **Fixed:** `Fixed in <sha>: <what changed>`. Post it only after the fix is pushed to that PR. A fix that failed verification gets no reply yet, and its thread stays open.
+- **Deferred:** `Deferred to <bead-id>: <why it belongs there>`. Post it as soon as the user agrees to the triage, or to deferring the finding the thread became (see *Finding comments*).
+- **Declined:** `Not changing this: <reason>`, citing the owner's decision or the review rule where one applies. Post it as soon as the user agrees to the triage, or to declining the finding the thread became.
+
+End every reply with the footer `_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_`. That footer is how a later run tells an outcome reply apart from other comments, because replies are posted from the user's own account. If a thread was resolved by hand without a reply, it still gets one: ask the user the outcome if it isn't clear.
+
+Feedback outside threads can't be resolved, so it gets one PR comment instead: link each item and state its outcome in the same words (Fixed, Deferred, Declined), ending with the footer. An item counts as answered once a later footer-signed comment links to it.
+
+After replying, read the threads again and confirm that every one is resolved and ends with an outcome reply, and that every item of feedback outside threads has been answered. Fix any you missed before ending the run.
+
+## Stage — Fix round
+
+1. Findings that didn't come through triage (manual test, codebase check) haven't been offered for deferral yet. List them first, and let the user defer or decline any (see *Finding comments*); fix the rest. A `CI, main` finding can't be deferred or declined: `main` is broken and the wave can't close until it's green, so it's fixed in this wave. Group them for shared causes too, and offer a repair bead for each group before running fix mode, instead of sending its findings to each bead (see *Shared causes*). A finding with a `Cause for` comment has been through fix mode already: don't send it back there unless the owner asks. Offer the repair bead, or Triage's undeclared-dependency choice if the cause is in another bead's file.
+2. On the wave branch, kept current as described in *Branches*, group the open findings by bead. Run the **beads-implement** skill in this session with the args `fix <bead-id> <bead-id> …`. It reopens each bead and sends its open findings to a **new** sub-agent, which changes only what the findings need and reports causes outside its bead's files instead of working around them. It verifies everything centrally, adds a `Resolved` comment per fixed finding, updates the bead's `Files:` comment, and closes each bead that has no open findings left.
+3. Handle what fix mode couldn't finish, then carry on with the beads that closed or got a new `Resolved` comment:
+   - **A bead came back `blocked`:** set its partial changes aside so they don't mix with the others' (`git stash push --include-untracked -m "<bead-id> blocked fix" -- <its files, including any it created>`), and report what failed. Without `--include-untracked`, new files the fix created would stay behind.
+   - **A shared cause fix mode reported:** its findings are still open and their beads still `in_progress`. Offer the owner the repair bead fix mode proposed, as in *Shared causes*. On a yes, create it, defer the findings to it, and run fix mode once more for just the repair bead before going on. If the owner would rather defer or decline the findings, record that as in *Finding comments*, including the answer on the thread or comment each one came from. Either way, close each bead that has nothing else open.
+   - **A finding fix mode wouldn't take, or left open,** because it needs another bead's file: bring it to the user as Triage's undeclared-dependency case. To fix it in both PRs, give each bead a finding for its own part, and close the original with `Deferred <finding id>: split into <new finding ids>` so only the new findings stay open. The new finding on the original's bead keeps its `Context:`, so the thread or comment it came from is answered once that part lands. The other bead's finding gets `Context: split from <bead-id> (<finding id>)` instead, so nothing on its PR answers an item on the original's PR. If the original's bead has no part of its own, answer the item as a deferral to the other bead (see *Finding comments*). If one PR needs the other's code, add `Waits for <bead-id>: needs <what>` on the dependent PR's bead, naming the other bead. That one merges first, and Step 1 item 6 then does **Sync with main** on the dependent PR so its CI and review run again with the prerequisite on `main`; merge it once they pass. Merging the first PR doesn't re-run the second one's checks.
+4. If any bead closed, or a bead still open got a new `Resolved` comment this round, commit on the wave branch as one commit. Stage only the files those beads' fixes changed (a bead still open has only verified fixes to commit: fix mode leaves its other findings untouched), and check the staged diff for keys or tokens. Subject: `Fix <source> findings in wave <n>: <short list>`.
+5. Work out which manual test steps the fixes touch. Use each finding's `Re-test:` line and the beads named on each step of the `Manual test plan` comment. If any are touched, add a `Re-test needed after <sha>: steps <list>` comment on the sub-epic.
+6. For each bead whose files changed that has an open PR:
+   - Switch to its bead branch. If `origin/main` has moved on since the branch was cut, merge it in first, so the files you copy don't bring `main`'s newer content in as part of this PR. Then copy those files from the wave branch, and rebuild generated files.
+   - Commit with the subject `Address <source> on PR #<n>: <short list>`, where `<source>` is, for example, `second review`, `manual re-test` or `CI failure`. Add a bullet per fix in the body and the session's commit attribution line. Push.
+   - If a changed file belongs to another bead, stop and ask the user. Triage and fix mode should have caught it, and that fix would have to go into the other bead's PR too.
+   - Reply `Fixed in <sha>: …` on each fixed thread and resolve it, then confirm every thread on the PR is resolved and has its reply. The exception is a thread behind a finding still open on the bead: it gets no reply and stays unresolved until its fix lands.
+   - Request a new review on each PR you pushed (see *Review requests*).
+
+   Switch back to the wave branch and restore its state (see *Branches*).
+
+7. Carry on with the rest of Step 1's list. Beads without a PR, such as before the first PRs open or a new repair bead, go on to **Open the PRs**. PRs this round pushed to wait for the reviewer; other PRs can still move on in this run.
+
+## Stage — Re-test (before opening the PRs, and before merging)
+
+If the re-test list isn't empty, run it on the wave branch, kept current, because a step can depend on more than one bead. The list covers steps the fixes touched, and steps that were blocked or not run during testing. Walk the user through those steps exactly as `/iwol:beads-summary-and-test` does. Take each step from the `Manual test plan` comment, send one at a time labelled `Re-test 1 of 3 — <title>`, and wait for pass or fail. Before sending each step, do the setup its line records (`setup …`). If the step relies on something earlier steps in its group created, such as data the user added, and it's gone (for example after a database reset), recreate it first: yourself with SQL or seed data where you can, or by walking the user through those earlier steps again. The comment keeps only one line per step, so write each step out in full in that skill's format: one numbered list with each action and its expected result, labels taken from the code, commands in `bash` blocks and URLs as links. If the list runs to more than about 10 steps, split it into groups of related steps the way that skill splits a long test, and re-test one group per run.
+
+- All pass: add a `Re-tested <date>: steps <list> pass` comment on the sub-epic. If steps are left in other groups, end the run; the next run, in a new session, re-tests the next group. Otherwise carry on.
+- Any fail: add a `Finding` comment for it on the step's bead, reopen the bead, and end the run. The next run starts with a fix round.
+
+## Stage — Open the PRs
+
+1. Re-test first, if the re-test list isn't empty.
+2. Make sure the wave's work is committed on the wave branch (Step 1 does this on the first run).
+3. Check that the beads' files cover every file the wave branch changes compared with `origin/main`, with each file owned by exactly one bead whose PR hasn't merged. The exceptions are generated files and shared files split by hunk (see *Branches*). Ask the user about any file with no owner.
+4. For each bead that changed files and has no PR yet, skipping `blocked` beads. Pick up where an earlier attempt stopped:
+   - If its bead branch already exists, reuse it, and push it if it isn't on GitHub yet. Otherwise create it from an up-to-date `origin/main`, after merging `origin/main` into the wave branch (see *Branches*).
+   - Before opening a PR, check for one already on the branch (`gh pr list --head <bead-branch> --state all`). If there is one, record it instead of creating another.
+   - Copy in its files, or its hunks of shared files, from the wave branch, and rebuild generated files.
+   - If that changed anything, commit with the bead's title as the subject, a short body, and the commit attribution line. Push.
+   - Open its PR against `main`:
+     - Title, by the config's `PR title format`:
+       - `free`: `Wave <n>: <bead title>`, where `<n>` is the wave the bead runs in. Don't derive it from the bead's ID: a bead moved between waves keeps its old ID.
+       - `conventional commit`: `<type>: <summary>`, with the summary taken from the bead's title. Propose the type from the bead's task-kind label: `docs` gives `docs:`, `test-only` gives `test:`, and `code-change` gives `feat:` or `fix:`, judged from the bead's title (`fix:` when it repairs existing behaviour, otherwise `feat:`). If the bead has none of those labels, ask the user for the type. Keep any `@word` out of the title, by dropping the `@` or rewording: release-please builds the changelog from these titles and would turn it into a link to a GitHub profile. Before creating the run's first PR, list the proposed title for each bead and wait for the user to confirm or change each one. Create no PR whose title the user hasn't confirmed, and check any title they write for `@word` too.
+     - Body: `Implements bead **<bead-id>** (wave <n> of <epic title>)` and what it does in a few lines.
+     - Add its acceptance criteria and how they were verified (from the bead's close reason), and the manual test results for the steps naming this bead.
+     - List any findings deferred to later beads, and end with the session's PR attribution line.
+   - Record the PR on the bead: `bd update <bead-id> --external-ref gh-<n>`.
+5. Switch back to the wave branch and restore its state (see *Branches*).
+6. Don't request reviews if the config says the reviewer reviews new PRs by itself; otherwise request one on each new PR (see *Review requests*). If the desktop app offers its Auto-fix for these PRs, don't enable it. CI failures go through triage and fix rounds, and a second fixer would push competing commits.
+7. If these were the wave's first PRs, end the run. Tell the user to run `/iwol:beads-pr <id>` in a new session once the reviews are in. Mention that a wave's worth of PRs means as many reviews at once, so the reviewer's usage limit may come up.
+
+## Stage — Sync with main
+
+A bead PR needs a sync when GitHub reports it conflicts with `main`, or when another bead's merge changed a generated file it also carries.
+
+1. Merge `origin/main` into the bead branch. Resolve conflicts: for docs, keep both beads' text; for generated files, take either side, then rebuild them with the config's commands.
+2. Commit and push. It's a push, so request a review if the reviewer needs one (see *Review requests*).
+3. Merge `origin/main` into the wave branch too, and restore its state (see *Branches*).
+
+**If merging `origin/main` into the wave branch conflicts**, the rule is the same under `Merge method: merge` and `Merge method: squash`. A bead branch is cut from `origin/main` and its files are copied in from the wave branch as new commits, so no wave commit reaches `main` under either method, and the merge compares the same three trees either way. This holds wherever this skill merges `origin/main` into the wave branch. Diagnose each conflicted file with `git log <merge base>..origin/main -- <conflicted file>`, where `<merge base>` is `git merge-base HEAD origin/main`:
+
+- **A generated file from the config**, whatever commits touched it: several beads may carry it, so it's expected to differ between the wave branch and `main`. Take either side, then rebuild it with the config's commands, as step 1 does on bead branches. Then re-run the config's checks, as *Branches* says.
+- **Only commits from outside the wave changed the file**, usually another PR on `main` that edited one of the wave's files: resolve the conflict, keeping both sides' intent. Then rebuild generated files and re-run the config's checks, as *Branches* says.
+- **Every commit touching the file is one of this wave's merged bead PRs** (the merge or squash commit named in its bead's `Merged in PR #<n> as <sha>` comment, or a commit from that PR's branch): stop and show the conflict (the conflicted files and their hunks) rather than resolving it, then abort the merge (`git merge --abort`) so the wave branch stays as it was. A conflict there means the wave branch and its merged PR really differ, for example a fix that never reached its PR. If any conflicted file is in this case, stop, even if others could be resolved.
+- **Both an outside commit and one of this wave's merged bead PRs changed the file:** classify it by hunk. Show its conflicted hunks, and find which commits changed `main`'s side of each with `git blame <merge base>..origin/main -- <conflicted file>` (lines unchanged since the merge base are marked `^`). If every line of a hunk comes from outside commits, resolve that hunk, keeping both sides' intent. If any line of a hunk comes from one of this wave's merged bead PRs, the wave branch and its merged PR differ there: stop and show that hunk, then abort the merge (`git merge --abort`), as for a file only this wave's PRs touched, even if other hunks or files could be resolved. If every hunk was resolved, rebuild generated files and re-run the config's checks, as *Branches* says.
+
+## Stage — Merge
+
+A PR is ready when all of these hold:
+
+- **The reviewer is clean on its head.** That means one of two things:
+  - Its clean signal from the config, given after the head commit.
+  - Or, only if the config says resolved findings count as clean: its latest review is on the head commit, doesn't request changes, and every thread it raised has an outcome reply and is resolved. This happens when triage deferred or declined everything, so nothing was pushed.
+
+  A review still in progress isn't clean yet. If the config says "Reviewer: none", skip this condition.
+- Every CI check on the head commit passed.
+- Every review thread on the PR has an outcome reply and is resolved, every item of feedback outside threads has been answered, and its bead has no open findings and is closed.
+- It doesn't conflict with `main`.
+- Its branch has every change the wave branch has to the bead's own files (the check in Step 1, item 5).
+- Its bead has no `Waits for <bead-id>` comment whose bead's PR hasn't merged, or whose merge commit (named in that bead's `Merged in PR #<n> as <sha>` comment) the PR's branch doesn't contain yet. Under `squash`, that commit is the squash commit, which a branch contains once `origin/main` has been merged into it since. Passing CI doesn't settle this: a PR can pass without its prerequisite, for example when its tests mock a runtime dependency. Step 1 item 6 syncs it once the prerequisite has merged.
+
+Run **Re-test** first if the re-test list isn't empty.
+
+Then list every ready PR and ask the user for one explicit yes to merge them. If the config says the reviewer leaves no formal GitHub approval, tell them plainly that the PRs have none, along with anything else the config notes about that.
+
+On a yes, merge them one at a time:
+
+- **Order:** follow the config's merge-order rule, if it has one. Others can go in any order.
+- After merging a PR that carries a generated file from the config, don't merge any other PR in this run that carries the same file, even if it doesn't conflict. Its copy is stale now and may merge cleanly and still be wrong, so it goes through **Sync with main** first.
+- After merging a PR, don't merge any other PR in this run whose bead has a `Waits for` comment naming the merged PR's bead. Its CI and review never ran with the prerequisite on `main`, so it goes through **Sync with main** first.
+- Before each merge, check again that the PR doesn't conflict with `main`. Stop at the first one that does; the next run syncs it.
+- Merge the way the config's `Merge method` says, pinned to the head you checked. Never use a rebase merge.
+  - `merge`: a merge commit, with the config's subject and body format. Never paste PR text, such as its title, into a shell string: backticks, `$VAR` and `$(…)` in it would be expanded. Fill `$SUBJECT` and `$BODY` with `gh pr view <n> --json title,number,headRefName --jq '<the format as a jq string>'`, taking the PR's fields from the JSON (`\(.title)`, `\(.number)`, `\(.headRefName)`), and pass them as `--subject "$SUBJECT" --body "$BODY"`. Run the reads and the merge in one Bash call, since variables don't carry over between calls, and chain them so the merge runs only if both reads succeeded and the subject isn't empty: `SUBJECT=$(…) && BODY=$(…) && [ -n "$SUBJECT" ] && gh pr merge …` (see the command list below). Otherwise a failed read leaves the subject empty, and GitHub falls back to its default subject, which lands on `main` for good.
+  - `squash`: a squash, with the subject the PR's title and number. Never paste the title into a shell string: backticks, `$VAR` and `$(…)` in it would be expanded, and the mangled subject would land on `main` for good. Read it into a variable in the same Bash call as the merge, which also reads it just before merging, and chain them so the merge runs only if the read succeeded and the subject isn't empty:
+
+    ```bash
+    SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
+      [ -n "$SUBJECT" ] &&
+      gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT"
+    ```
+
+    Setting the subject keeps the squash commit's subject the PR's title: for a one-commit PR, GitHub would otherwise take that commit's subject. Add `--delete-branch` only if the config says the skill deletes branches, not if it says GitHub deletes them on merge. gh's `--delete-branch` also force-deletes the local bead branch, so before passing it, check that the local branch, if it's still there, holds nothing beyond the head you checked: `git log <full sha>..<bead-branch>` prints nothing. If it prints commits, stop and show them.
+- Record it on the bead: `bd comments add <bead-id> "Merged in PR #<n> as <merge sha>"`. `<merge sha>` is the commit the merge made on `main`: the merge commit under `merge`, the squash commit under `squash`. Either way, `gh pr view <n> --json mergeCommit --jq .mergeCommit.oid` gives it.
+- Never enable auto-merge. The config's `Auto-merge: never` says the same.
+
+Afterwards, merge `origin/main` into the wave branch. If every bead's PR has now merged, go straight to **Close the wave**.
+
+## Stage — Close the wave
+
+1. Confirm that every child bead is closed and every bead with files has a merged PR.
+2. Read CI for `main`'s current commit once: run `git fetch origin`, then `gh run list --branch main --commit $(git rev-parse origin/main)`. Pin the query to that commit; an older green run on `main` proves nothing about the merged wave. Each PR's CI ran against an older `main`, so the merged result hasn't been checked yet.
+   - If there's no run for that commit yet, or it's still running, say so and end the run.
+   - If it failed, don't close anything. Show the user the failure and sort it out with them:
+     - **Flaky or not the wave's doing** (infrastructure, a timeout, another PR): re-run the failed jobs with their OK (`gh run rerun <run-id> --failed`), and check again on the next run.
+     - **Caused by the wave**, such as two merged beads that only break together: create a repair bead under the sub-epic (`bd create --parent <sub-epic> --no-inherit-labels`, with `agent:`, `effort:` and `code-change` labels). Add a `Finding [CI, main]` comment describing the failure, and a `Files:` comment listing the files the repair needs. Their beads' PRs have merged, so no open PR owns them.
+     - Then do a **Fix round** for the repair bead and **Open the PRs** for it. The wave closes once its PR merges and `main` is green.
+3. Do **Clean up**. If it stops, end the run without closing the sub-epic. The next run comes back here and the clean-up picks up where it stopped.
+4. Close the sub-epic: `bd close <sub-epic> --reason "All bead PRs merged: #<n>, #<n>, …. <one line on verification and manual testing>"`.
+5. Report briefly:
+   - The wave is done, with the PR links.
+   - What the clean-up removed, and anything it left for the user to decide.
+   - The findings deferred to later beads, one line each.
+   - The next step: `/iwol:beads-implement <next sub-epic id>` in a new session.
+
+   If this was the epic's last open sub-epic, say the whole epic is complete and ask whether to close it.
+
+## Stage — Clean up
+
+Runs once every bead's PR has merged, just before the sub-epic closes. Their work is on `main`, so the clean-up needs no confirmation. It stops and asks at the first thing that doesn't check out. Every step skips what's already done, so a re-run after a stop picks up where it left off; if the wave branch is already gone, skip step 2. Never use `--force` (the one exception is `git branch -D` on the wave branch in step 5; under `squash`, also on the branches steps 5 and 7 have checked), and never touch `main` or any branch or worktree that isn't this wave's without asking.
+
+1. **Collect the wave's branches.** The wave branch is `git branch --list 'feature/<sub-epic-id>-*'`, and each bead branch is its PR's `headRefName`. Check that every one of those PRs is `MERGED`. Under `squash`, also note each PR's `headRefOid` (`gh pr view <n> --json state,headRefName,headRefOid`) for steps 5 and 6, and expect bead branches that are already gone locally, on GitHub, or both: GitHub, or gh's `--delete-branch`, may have deleted them at the merge. Later steps skip those.
+2. **Check nothing was left behind.** Run `git fetch origin --prune`, merge `origin/main` into the wave branch (other PRs may have landed while the wave waited; if it conflicts, follow the conflict rule in *Sync with main*), then run `git diff --stat origin/main <wave-branch>`. It must print nothing. If it lists files, stop and show them: part of the wave never reached a PR.
+3. **Step off the branches.**
+   - In the wave's worktree, where this session runs once it has entered it: `git switch --detach origin/main`, because `main` is checked out in the main checkout.
+   - In the main checkout, only when it holds the wave branch or a bead branch, as for a wave started before waves had their own worktrees: `git switch main && git pull --ff-only`.
+   - Leave the branch of any other checkout this session runs in alone, such as a main checkout on other work or the desktop app's worktree for the session.
+
+   If git refuses because of local changes, stop and show them.
+4. **Remove the wave's worktrees.** For every worktree checked out on the wave branch or a bead branch (`git worktree list`), other than this session's own, run `git worktree remove <path>`. If git refuses because of uncommitted changes, stop and show `git -C <path> status --short`. Finish with `git worktree prune`.
+5. **Delete the local branches.**
+   - Bead branches, skipping any already gone locally:
+     - `merge`: `git branch -d`. They're merged, so git agrees.
+     - `squash`: git never sees a squash-merged branch as merged, so `-d` refuses. First check that the branch holds nothing beyond what merged: `git log <the PR's headRefOid>..<bead-branch>` must print nothing. If it prints commits, stop and show them. Otherwise delete it with `git branch -D <bead-branch>`. If git doesn't have the `headRefOid` commit, fetch it first with `git fetch origin pull/<n>/head`.
+   - The wave branch: `git branch -D`. Its commits aren't the ones on `main`, but step 2 proved all its content is there. `-D` is a forced delete, and this is the one place the clean-up allows it under `merge`, only after step 2 has passed.
+6. **Delete the bead branches on GitHub:** `git push origin --delete <bead-branch>` for each, skipping any already gone. Under `squash`, first check that `git log <the PR's headRefOid>..origin/<bead-branch>` prints nothing, as in step 5, and stop and show any commits it prints. A merged PR's branch can be restored from the PR page if it's ever needed.
+7. **List leftovers, and ask.** Look for other worktrees whose branch is already merged into `origin/main` and that have no uncommitted changes, for example a session worktree left on one of this wave's commits.
+   - `merge`: `git branch --merged origin/main` lists those branches.
+   - `squash`: git doesn't see squash-merged work as merged, so check each other worktree's `HEAD` by content instead, detached ones included. It's a leftover when merging it into `main` would change nothing: `git merge-tree --write-tree origin/main <HEAD>` succeeds and prints the same tree as `git rev-parse 'origin/main^{tree}'` (git 2.38 or later).
+
+   They may belong to other sessions, so list them and remove only the ones the user names, with `git worktree remove` and `git branch -d` for their branch (under `squash`, `git branch -D`, which the content check above allows). **This session's own worktree**, which step 4 left alone, goes without asking when it's the wave's (`.claude/worktrees/<sub-epic-id>-<title>`), since it's this wave's; any other, such as a desktop app worktree the session started in, goes only if the user names it. Before removing it, delete the branch it started on, such as the `claude/<name>` branch the desktop app makes for a session: the `<a>` in the oldest `checkout: moving from <a> to …` line that `git reflog --format=%gs HEAD` prints (the last such line), left alone when it's `main`, a commit SHA, gone, checked out in another worktree, or one of this wave's branches, which step 5 handled. Delete it with `git branch -d`, never `-D`: step 3 left the worktree detached at `origin/main`, so git refuses if the branch has commits that aren't on `main`; then keep it and report them. Remove the worktree itself last, as `/iwol:create-pr` does: once the sub-epic is closed, the report given and, on the epic's last wave, the epic closed or left open as the user says (*Close the wave*, steps 4 and 5), leave and remove it as *Leaving and removing one* in `../start/worktrees.md` says. Note its path (`git rev-parse --show-toplevel`) and call `ExitWorktree` with `action: "keep"`.
+   - **If that moved the session** (it entered the wave's worktree with `EnterWorktree`), run `git worktree remove "<path>"` from the folder it's back in, and leave that folder's branch and files alone. Tell the user the worktree is gone and the session is back in that folder.
+   - **If it reports that no worktree session is active**, run `git worktree remove "$(git rev-parse --show-toplevel)"`. It deletes this session's working directory, so run nothing in this session after it, and tell the user the worktree is gone and the session can be closed.
+
+   Never add `--force`, so git still refuses if anything uncommitted is there.
+
+## Review requests
+
+How to request a review, and when the reviewer reviews by itself, are in the config. Skip this section entirely if the config says "Reviewer: none", or that the reviewer reviews every push by itself or can't be asked; then nothing ever needs a request. Otherwise these rules apply to the common case: a reviewer that reviews a PR once when it opens, and later only on request.
+
+- **Every push to a PR's branch after the PR exists needs one request on that PR.** This covers fix rounds, syncs and any other push. Post the request after the push, and after replying to and resolving the threads it fixes.
+- **Never request a review when opening a PR** if the reviewer reviews new PRs by itself; it's already starting one.
+- **Don't request again while one is pending.** The config says how the reviewer shows a review in progress.
+- **Catch missed requests.** If a PR was pushed to after it opened, and there's no review request since that push (for example, someone pushed by hand), request one at the start of the run. A PR that hasn't changed since it opened needs none; it was reviewed then.
+- **The reviewer's usage limit:** if it replies that it has hit its limit, the request didn't count. Tell the user and request again once they say the limit has reset.
+
+## Finding comments
+
+beads-summary-and-test, this skill and beads-implement's fix mode all use one comment format, so any session can tell what's open:
+
+```
+Finding [<source>]: <one-line summary>
+Where: <file:line, or screen and URL>
+Expected: <what should happen>
+Actual: <what happens>
+Re-test: <the manual step to re-run after the fix, or "none">
+Context: <PR thread, review or comment URL, CI run URL, or test session date>
+```
+
+`<source>` is one of `manual test, step 3 of 6` (`step 2.3` for a step the test plan numbers `<group>.<step>`), `codebase check`, `review by <login>, PR #<n>` (the reviewer's or a person's), `CI, PR #<n>` or `CI, main`. A finding stays open until a later comment on the same bead starts with `Resolved <finding comment id>`, `Deferred <finding comment id>` or `Declined <finding comment id>`. Use the first 8 characters of the comment's id, from `bd comments <id> --json`.
+
+To defer a finding, with the user's agreement, add `Deferred <finding id>: to <later bead-id>, <reason>` on its bead. `CI, main` findings are the exception and can't be deferred, because the wave can't close while `main` is red. A `CI, PR #<n>` finding can't be deferred to a later wave: its check would stay red, so the PR couldn't merge and the later wave could never start. Within the wave it can go to a repair bead (see *Shared causes*) or be split into per-bead findings (Fix round step 3), and either way its PR's bead gets a `Waits for <bead-id>` comment naming the bead whose PR has to merge first. Then add a comment on the later bead starting `Deferred from <bead-id>:`, written so it stands alone (what to change and why). To decline a finding, also only with the user's agreement, add `Declined <finding id>: <reason>` on its bead, citing the owner's decision. `CI, main` and `CI, PR #<n>` findings can't be declined: a failing check blocks the merge until it passes. If the bead was reopened only for findings that are now all resolved, deferred or declined, close it again.
+
+A Triage **Fix** item becomes a finding whose `Context:` is the URL of the thread, review body or PR comment it came from, and that item stays unanswered until the finding's fix lands. Whenever such a finding is deferred or declined outside Triage (in a fix round, or to a repair bead), also answer its item as soon as the owner agrees, with `Deferred to <bead-id>: …` or `Not changing this: …` (see *Every thread gets a reply and a resolution*): reply on a thread and resolve it, and answer a review body or PR comment in a footer-signed PR comment that links it. Bead comments alone would leave the item unanswered: the PR couldn't merge, and the next run would triage it again and could offer a second repair bead for it. Splitting a finding (Fix round step 3) is the exception when the original's bead keeps a part: the item waits for that part's fix, whose finding keeps its `Context:`.
+
+## Shared causes
+
+Each bead's fix may change only its own files. When findings on several beads come from one cause in shared code (a UI kit component, a data-layer hook, a layout), a fix in each bead can only work around it: sizes estimated from the window, timers that wait out a race, copies of the shared hook. The symptom stays on every other screen that uses that code, and the workarounds have to come out again once the cause is fixed. Fix the cause once instead, in one repair bead.
+
+**Spot them before the fix round.** Group the open findings and triage items that may share a cause:
+
+- the same symptom on several beads, such as a sheet that won't scroll or a value that flashes back as it saves;
+- a cause a finding names in a file outside its bead's files, including a `Cause for <finding id>` comment that fix mode left on its bead, or a `Needs outside this bead` comment its worker left during implementation.
+
+For a group whose cause is in a file no bead owns (in no `Files:` comment of a bead whose PR hasn't merged, usually because it's already on `main`), offer the owner one repair bead up front, instead of sending the findings to each bead: the likely cause, the file, the findings it would replace, and its labels. Don't offer fixing each bead in its own files as the recommended choice; that's what produces the workarounds. If the file belongs to another bead, it's Triage's undeclared-dependency case instead.
+
+Fix mode can find shared causes too. Its sub-agents leave those findings open and report the cause, with file:line evidence and the change the file needs. Fix mode records it on the bead as a `Cause for` comment and proposes a repair bead. Offer it to the owner in the same way.
+
+On a yes:
+
+1. Create the repair bead under the wave's sub-epic: `bd create --parent <sub-epic> --no-inherit-labels`, with `agent:`, `effort:` and `code-change` labels. Its description stands alone: the cause with file:line evidence, the change the shared file needs, every screen or bead it shows on (including ones already on `main`), and that the fix goes in the shared file with no per-screen workaround.
+2. Add a `Finding` comment per cause. Its `Re-test:` covers the steps of every finding it replaces, and its `Context:` names what it replaces: `moved here from <bead-id> (<finding id>), …` for findings, the thread or comment URL for triage items. It stands in for the `Deferred from` comment.
+3. Add a `Files:` comment listing the shared files. Check that none of them is in the `Files:` comments of another bead whose PR hasn't merged. If the repair also needs a change in another bead's file, give that bead a finding for its own part and handle the pair as Triage's undeclared-dependency case.
+4. Defer what it replaces. For a finding, add `Deferred <finding id>: to <repair bead-id>, shared cause in <file>` on its bead, and close the bead again if nothing else on it is open. For a triage thread, reply `Deferred to <repair bead-id>: …` on it and resolve it. A finding whose `Context:` is a thread, review or comment URL gets the same answer on that item (see *Finding comments*). Deferring doesn't make a failing check pass, so for a failing CI check, whether a triage item or a `CI, PR #<n>` finding, also add `Waits for <repair bead-id>: <check> fails on this cause` on the PR's bead. That PR waits for the repair bead's PR: once that merges, do **Sync with main** on it so its CI and review run again, and merge it once they pass.
+
+The repair bead then goes through the **Fix round** and **Open the PRs** like any other bead. Its PR fixes the cause for every screen at once.
+
+## Commands that have worked on this repo
+
+```bash
+# Review threads, with each thread's comments
+gh api graphql -F owner='{owner}' -F name='{repo}' -F n=<n> -f query='query($owner:String!,$name:String!,$n:Int!) { repository(owner:$owner, name:$name) { pullRequest(number:$n) { headRefOid mergeable reviewThreads(first:100) { nodes { id isResolved path line comments(first:20) { nodes { databaseId author { login } body createdAt } } } } } } }'
+
+# Reply to a thread (use the first comment's databaseId), then resolve it
+gh api -X POST repos/{owner}/{repo}/pulls/<n>/comments/<comment id>/replies -f body="$BODY"
+gh api graphql -f query='mutation($id:ID!) { resolveReviewThread(input:{threadId:$id}) { thread { isResolved } } }' -f id=<thread id>
+
+# The reviewer's reviews and reactions (its REST login is in the config)
+gh api repos/{owner}/{repo}/pulls/<n>/reviews --jq '.[] | select(.user.login == "<reviewer login>") | {submitted_at, commit_id, state}'
+gh api repos/{owner}/{repo}/issues/<n>/reactions --jq '.[] | select(.user.login == "<reviewer login>") | {content, created_at}'
+
+# Does a bead branch contain a prerequisite's merge commit? (exit status 0 means yes; fetch first)
+git merge-base --is-ancestor <merge sha> origin/<bead-branch>
+
+# Read CI once (never --watch)
+gh pr checks <n>
+
+# Copy one bead's files from the wave branch onto its bead branch
+git switch <bead-branch> && git checkout <wave-branch> -- <file> <file>   # git rm any the bead deleted
+
+# Merge with a merge commit, pinned to the checked head (subject and body format from the config, written as jq strings
+# over the PR's fields, so no PR text goes through the shell). Run it as one chained Bash call: nothing merges if a read fails or the subject is empty
+SUBJECT=$(gh pr view <n> --json title,number,headRefName --jq '<subject format as a jq string>') &&
+  BODY=$(gh pr view <n> --json title,number,headRefName --jq '<body format as a jq string>') &&
+  [ -n "$SUBJECT" ] &&
+  gh pr merge <n> --merge --match-head-commit <full sha> --subject "$SUBJECT" --body "$BODY"
+
+# Or squash, pinned to the checked head (Merge method: squash). Add --delete-branch only if the config says the skill deletes branches.
+# Run it as one chained Bash call: the title is read just before merging and never goes through the shell, and nothing merges if the read fails or the subject is empty
+SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
+  [ -n "$SUBJECT" ] &&
+  gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT"
+
+# Under squash: does a bead branch hold anything beyond what merged? (must print nothing before deleting it)
+git log <headRefOid>..<bead-branch>
+
+# Under squash: would merging a leftover worktree's HEAD change nothing on main? (same tree means yes)
+git merge-tree --write-tree origin/main <HEAD>; git rev-parse 'origin/main^{tree}'
+```
+
+## Non-goals
+
+- Don't write implementation code or dispatch sub-agents. Fixes go through `beads-implement fix`.
+- Don't resume earlier sub-agents with `SendMessage`. Fix rounds always start new agents.
+- Don't push the wave branch, and don't put two beads in one PR.
+- Don't use `--force` in the clean-up, apart from `git branch -D` on the wave branch after step 2 has passed, and, under `squash`, on a bead branch after `git log <headRefOid>..<bead-branch>` printed nothing or on a leftover branch the user named after its content check. Don't delete a branch or worktree that isn't this wave's without the user naming it.
+- Don't poll or wait for the reviewer or CI. Report and end the run.
+- Don't merge without an explicit yes in the current run, and never enable auto-merge.
+- Don't defer or decline a review item without the user's agreement.
+- Don't send findings that share a cause in shared code to each bead's fix. Offer the owner one repair bead.
+- Don't resolve a thread without an outcome reply, or leave a replied-to thread unresolved.
+- Don't edit bead descriptions. Findings, deferrals and re-test records go in comments.
+- Don't start the next wave. That's `/iwol:beads-implement`, in a new session.

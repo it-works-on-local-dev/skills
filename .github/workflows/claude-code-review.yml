@@ -1,0 +1,26 @@
+name: Code Review
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+    branches: [main]
+  issue_comment:
+    types: [created]
+jobs:
+  review:
+    name: Claude
+    permissions:
+      contents: read
+    uses: it-works-on-local-dev/code-review/.github/workflows/claude-code-review.yml@main
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      REVIEW_APP_PRIVATE_KEY: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+    with:
+      review-app-client-id: ${{ vars.REVIEW_APP_CLIENT_ID }}
+      approve: true
+      checks: |
+        run_step setup claude-code npm install -g @anthropic-ai/claude-code
+        run_step setup actionlint-script curl -fsSL -o "$RUNNER_TEMP/download-actionlint.bash" https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash
+        run_step setup actionlint-install bash "$RUNNER_TEMP/download-actionlint.bash" 1.7.7 "$RUNNER_TEMP"
+        run_step check validate-marketplace claude plugin validate .
+        run_step check validate-plugin claude plugin validate plugins/iwol
+        run_step check actionlint "$RUNNER_TEMP/actionlint"

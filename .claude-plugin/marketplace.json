@@ -1,0 +1,14 @@
+{
+  "name": "iwol",
+  "owner": {
+    "name": "it-works-on-local-dev"
+  },
+  "description": "Shared Claude Code plugin for it-works-on-local-dev repositories.",
+  "plugins": [
+    {
+      "name": "iwol",
+      "source": "./plugins/iwol",
+      "description": "Shared Claude Code skills and worker agents for it-works-on-local-dev repositories: the beads workflow, grill-me, and the PR and release flows."
+    }
+  ]
+}
