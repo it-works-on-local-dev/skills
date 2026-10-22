@@ -1,6 +1,6 @@
 ---
 name: create-release
-description: 'Cut a production release by merging the Release PR that release-please keeps open on the base branch. Finds the PR by its configured head branch, shows its version and changelog, reads the SQL of the release''s new database migrations for destructive statements, merges only on the user''s explicit go-ahead, then watches the release workflow create the `vX.Y.Z` tag and the tag''s deploy run, and verifies production through the configured version URL. Use when the user runs /iwol:create-release or asks to "cut a release", "release", "deploy to production", "ship to production", "merge the release PR", or otherwise wants what has merged into the base branch released to production. Reads the repository''s release settings from .claude/iwol-config.md.'
+description: 'Cut a production release by merging the Release PR that release-please keeps open on the base branch. Finds the PR by its configured head branch, shows its version and changelog, reads the SQL of the release''s new database migrations for destructive statements, merges only on the user''s explicit go-ahead, then watches the release workflow create the `vX.Y.Z` tag and the GitHub Release, watches the tag''s deploy run when the config names a deploy workflow, and verifies production through the configured version URL when the config names one. Use when the user runs /iwol:create-release or asks to "cut a release", "release", "deploy to production", "ship to production", "merge the release PR", or otherwise wants what has merged into the base branch released to production. Reads the repository''s release settings from .claude/iwol-config.md.'
 ---
 
 # /iwol:create-release
@@ -8,7 +8,10 @@ description: 'Cut a production release by merging the Release PR that release-pl
 Release what has merged into the base branch to production. release-please keeps one Release PR open on the base branch: its title carries the next version and its body is that version's changelog entry. Merging it is the only way to release:
 
 1. The merge's push runs the release workflow, which creates the `vX.Y.Z` tag and the GitHub Release.
-2. The tag push runs the deploy workflow, which passes its gate and then deploys to production. Other workflows may run on the tag too.
+2. When the config names a deploy workflow, the tag push runs it, and it passes its gate and then deploys to production. Other workflows may run on the tag too.
+3. When the config names a production version URL, the skill checks that production reports the new version.
+
+A repository whose releases deploy nothing (its config's **Deploy workflow** and **Production version** say `none`) stops after the first: the skill watches the release workflow's run and reports the tag and the GitHub Release. When the deploy workflow is the release workflow itself, because its only deploy step is moving a `v<major>` tag, the skill also reports that tag move.
 
 Run this only when the user asks to release or deploy to production. Never merge the Release PR just because the base branch looks ready. Nothing pushes to the base branch directly: every change reaches it through a reviewed PR, and a release is cut only by merging the Release PR.
 
@@ -19,15 +22,15 @@ Read `.claude/iwol-config.md` first. It holds everything specific to this reposi
 Then look at its Releases section:
 
 - **`Releases: none`:** say this repository has no release flow, and stop. Change nothing.
-- **Otherwise,** take these values from it. If any is missing, as in a config written before the field existed, stop and ask the user to run `/iwol:setup` to add it. Don't guess a value.
+- **Otherwise,** take these values from it. If any is missing, as in a config written before the field existed, stop and ask the user to run `/iwol:setup` to add it. Don't guess a value. A field that says `none` where the list below allows it is set, not missing.
   - **Release PR branch:** the Release PR's head branch.
   - **Release workflow:** the workflow file that creates the tag and the GitHub Release.
-  - **Deploy workflow:** the workflow file the tag push runs, and what gates its deploy.
-  - **Production version:** the URL that reports the running build's version, and the shape of its response.
+  - **Deploy workflow:** the workflow file the tag push runs, and what gates its deploy. It may be `none`, or the release workflow itself when the only deploy step is moving a `v<major>` tag. Both are valid values, not missing ones: step 5 then watches only the release workflow's run.
+  - **Production version:** the URL that reports the running build's version, and the shape of its response. It may be `none`, a valid value for a repository whose releases deploy nothing: step 6 is then skipped and the report gives the tag and the GitHub Release instead.
   - **Migrations to check before a release:** the directories whose new migrations the release must be inspected for, or `none`.
-  - **Rollback:** where rolling back is documented.
+  - **Rollback:** where rolling back is documented, or `none`.
 
-From the Git and GitHub section take the base branch (**Base branch**) and the **Merge method**. From the CI section take **Runs on** and **Recovering a stuck run**. Below, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. `<release-branch>`, `<release-workflow>` and `<deploy-workflow>` mean the config's values.
+From the Git and GitHub section take the base branch (**Base branch**) and the **Merge method**. From the CI section take **Runs on** and **Recovering a stuck run**. Below, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. `<release-branch>`, `<release-workflow>` and `<deploy-workflow>` mean the config's values. "No separate deploy workflow" below means **Deploy workflow** is `none` or names the release workflow itself.
 
 ## Steps
 
@@ -151,7 +154,7 @@ Afterwards, in the main checkout, update `main` as a separate command:
 git pull --ff-only origin main
 ```
 
-### 5. Watch the tag and the deploy
+### 5. Watch the tag and the deploy (or the release run)
 
 The merge's push runs the release workflow, which creates the `vX.Y.Z` tag and the GitHub Release. Poll for that version's GitHub Release for up to about three minutes:
 
@@ -161,7 +164,7 @@ for _ in $(seq 36); do gh release view vX.Y.Z --json tagName,url,isPrerelease --
 
 If nothing prints, check the release run for the merge's commit on `main` (`gh run list --workflow <release-workflow> --branch main --limit 3`) and report what it shows. Don't create the tag or the GitHub Release yourself.
 
-Then find the tag's deploy run. For a tag push the run's branch field is the tag name, so filter on it (the run can take a few seconds to appear):
+**With a separate deploy workflow,** find the tag's deploy run. For a tag push the run's branch field is the tag name, so filter on it (the run can take a few seconds to appear):
 
 ```
 gh run list --workflow <deploy-workflow> --branch vX.Y.Z --limit 1 --json databaseId,status,conclusion,url
@@ -174,15 +177,47 @@ gh run watch <run-id> --exit-status
 ```
 
 - **The run failed:** the gate (the config names what gates the deploy) or the deploy failed. Report which job and step failed (`gh run view <run-id> --log-failed`) and stop. Don't retry blindly; a red gate on a tag means `main` itself is broken.
-- **The run is stuck in `queued`:** this depends on the config's CI section.
-  - **`Runs on: picker`:** the run is waiting for the Mac's self-hosted runners, usually because the Mac is asleep or offline. Check with `gh run view <run-id> --json status,jobs --jq '.status, (.jobs[] | "\(.name): \(.status)")'`, then recover it as the config's **Recovering a stuck run** says. If that says `none` or `none documented`, report the stuck run and ask the user.
-  - **`Runs on: hosted`:** the run is only waiting for GitHub. Keep waiting, and report it if it stays queued.
+- **The run is stuck in `queued`:** see [A stuck run](#a-stuck-run) below.
 
 Other workflows the tag push runs don't gate the production deploy; mention them in the report only if one failed.
 
+**With no separate deploy workflow** (**Deploy workflow** is `none` or the release workflow itself), there is no deploy run to find: don't look one up on the tag. Watch the release workflow's run for the merge commit on `main`, the same workflow step 2 checked for the Release PR. The merge commit is `origin/main`'s commit after a fresh fetch:
+
+```
+git fetch origin
+git rev-parse origin/main
+gh run list --workflow <release-workflow> --branch main --limit 5 --json databaseId,status,conclusion,headSha,url
+```
+
+Take the run whose `headSha` equals that commit (it can take a few seconds to appear; list again for up to about two minutes, and if it still doesn't appear, report that and stop). Watch it to completion as a background Bash command (`run_in_background`) with a long `timeout` (`3600000`, an hour):
+
+```
+gh run watch <run-id> --exit-status
+```
+
+- **The run failed:** report which job and step failed (`gh run view <run-id> --log-failed`) and stop. Don't retry blindly, and don't do by hand what the workflow didn't.
+- **The run is stuck in `queued`:** see [A stuck run](#a-stuck-run) below.
+
+**When the deploy workflow is the release workflow itself,** its deploy step moves the major tag, `v<major>` of the released version (`v1` for `1.4.0`). Once the run is green, confirm on the remote that the major tag now points at the release's commit, the commit `vX.Y.Z` points at. Annotated tags list a second, peeled line ending in `^{}` that names the commit; compare commits, so use the peeled line where a tag has one:
+
+```
+git ls-remote --tags origin | grep -E 'refs/tags/(v<major>|vX\.Y\.Z)(\^\{\})?$'
+```
+
+If the major tag is missing or names another commit, report both commits and stop; don't move the tag yourself.
+
+#### A stuck run
+
+A run, deploy or release, that stays `queued` depends on the config's CI section, its **Runs on** value. Check it with `gh run view <run-id> --json status,jobs --jq '.status, (.jobs[] | "\(.name): \(.status)")'`.
+
+- **`Runs on: hosted`:** the run is only waiting for GitHub. Keep waiting, and report it if it stays queued.
+- **`Runs on: self-hosted: …`:** a job still `queued` can be waiting for one of the repository's own runners. The config's line says how to tell whether it is, so follow that, then recover the run as the config's **Recovering a stuck run** (or the line itself) documents. If the config says `none` or `none documented` for how to recover it, report the stuck run and ask the user.
+
 ### 6. Verify production
 
-The config's **Production version** URL returns the running build's version, in the response shape the config describes. Allow a couple of minutes for the deploy's build to finish and take traffic after the deploy run goes green:
+**If the config's Production version is `none`,** skip this step: there's no version URL to check. Say so, and step 7 reports the tag and its GitHub Release in place of the version URL's result.
+
+Otherwise, the config's **Production version** URL returns the running build's version, in the response shape the config describes. Allow a couple of minutes for the deploy's build to finish and take traffic after the deploy run goes green:
 
 ```
 curl -s <production-version-url>
@@ -197,12 +232,15 @@ Give the user:
 - the version;
 - the Release PR URL;
 - the tag (`vX.Y.Z`) and its GitHub Release URL;
-- the deploy run URL and its result;
-- the version URL's result, or that it's still pending.
+- with a separate deploy workflow, the deploy run URL and its result; with none, the release workflow run's URL and its result;
+- when the deploy workflow is the release workflow itself, the major tag it moved (`v<major>`) and the commit it now points at, confirmed to be the release's commit;
+- the version URL's result, or that it's still pending; with `Production version: none`, that there's no version URL to check, so the tag and its GitHub Release above are the release's result.
 
 ## Rollback
 
 Do this only when the user asks. Read the config's **Rollback** pointer first: the rollback it documents is the procedure. It says which tags can be redeployed and any faster rollback the deploy host offers. If it says `none`, tell the user the repository documents no rollback, and don't improvise one.
+
+**With no separate deploy workflow** (**Deploy workflow** is `none` or the release workflow itself), tell the user the repository has no deploy to redeploy or roll back. Follow the config's **Rollback** pointer only, and never dispatch any workflow, the release workflow included. The dispatch below applies only to a repository with a separate deploy workflow; the check after any rollback and the note on migrations apply to every repository.
 
 Dispatching the deploy workflow with an older tag as the ref rebuilds and redeploys that release:
 
@@ -214,7 +252,7 @@ Use it only when the documented rollback says a dispatch redeploys to production
 
 A dispatch runs the workflow file stored at that tag, so an older tag whose copy of the workflow differs from the current one may not deploy to production the same way. Check the documented rollback for tags this doesn't work for, and use the host's own rollback for those. A host-level rollback that swaps traffic back to the previous production build, where the host has one, is the faster option, since it doesn't rebuild.
 
-**After any rollback,** check the config's **Production version** URL the way step 6 does, and confirm it reports `A.B.C`, the version rolled back to. Don't call the rollback done until it does; if it still shows another version after a few minutes, report that.
+**After any rollback,** check the config's **Production version** URL the way step 6 does, and confirm it reports `A.B.C`, the version rolled back to. Don't call the rollback done until it does; if it still shows another version after a few minutes, report that. With `Production version: none` there's no URL to check: report what the documented rollback says about confirming it instead.
 
 **Neither a redeploy nor a host-level rollback reverses a database migration.** The older build runs against the newer schema, so a release that dropped, renamed or retyped something stays broken on rollback. Fix that forward with a new migration and a new release instead.
 
