@@ -15,11 +15,11 @@ In this skill, `main` means the base branch the config's Git and GitHub section 
 
 - **Checks:** `Format:` and `Format check:` (either may be `none`), and the full check and other suites, for targeted tests.
 - **Review:** the reviewer and its bot login, when it reviews, how to request a review, and its in-progress, clean, findings, round-counting and failure signals. `Reviewer: none` means there's no review loop.
-- **CI:** the workflow file and its gating jobs, `Runs on:` (`picker` or `hosted`), where recovering a stuck run is documented, and the wait loop. `CI: none` means no workflow runs on PRs.
+- **CI:** the workflow file and its gating jobs, `Runs on:` (`hosted`, or `self-hosted:` with how to tell a queued job is waiting for one of the repository's own runners), where recovering a stuck run is documented, and the wait loop. `CI: none` means no workflow runs on PRs.
 - **Git and GitHub:** the base branch, `Merge method:` (`merge` with its subject and body format, or `squash` with who deletes the branch), and `PR title format:` (`free` or `conventional commit`).
 - **Releases:** `none`, or release-please with its Release PR branch.
 
-Some parts of this skill apply only under a condition, and say so where they start: "**Under `conventional commit`**" (the PR title format), "**Under `squash`**" or "**Under `merge`**" (the merge method), "**Under `picker`**" or "**Under `hosted`**" (where CI runs), and "**With releases**" (Releases isn't `none`). Skip a part whose condition doesn't hold.
+Some parts of this skill apply only under a condition, and say so where they start: "**Under `conventional commit`**" (the PR title format), "**Under `squash`**" or "**Under `merge`**" (the merge method), "**Under `self-hosted`**" or "**Under `hosted`**" (where CI runs), and "**With releases**" (Releases isn't `none`). Skip a part whose condition doesn't hold.
 
 ## Conventions
 
@@ -68,19 +68,26 @@ The loop's `sha=$(git rev-parse HEAD)` is the commit you just pushed. When mergi
 - **`failure`:** read the log (`gh run view <run-id> --log-failed`) and handle it where you are in the flow.
 - **`cancelled`:** a newer push superseded the run, if the workflow cancels in-progress runs. If the PR's head has moved, wait on the new head's run instead. If it hasn't, someone cancelled the run, so tell the user.
 - **Not finished:** the loop prints each job's status. A gating job still `in_progress` is only slow, so wait again. A gating job still `queued`:
-  - **Under `picker`:** it's waiting for the Mac's runners (the run itself shows `in_progress`, because the hosted `runner / pick` job already ran). Handle it as below, then wait again.
+  - **Under `self-hosted`:** it may be waiting for one of the repository's own runners (the run itself can show `in_progress`, because other jobs, such as a job that picks a runner, already ran). Handle it as below, then wait again.
   - **Under `hosted`:** it's only waiting for GitHub's hosted runners. Wait again; re-running would only queue it again. If it's still queued after a second wait, tell the user.
 - **`null null null`:** CI never started for that commit, so tell the user.
 
-**Under `picker`**, a gating job still `queued` after the wait is waiting for the Mac's runners. Check them. Listing them needs a token that can read the org's self-hosted runners: an org admin's classic token with the `admin:org` scope (a default `gh auth login` doesn't grant it), or a fine-grained token with "Self-hosted runners: Read":
+**Under `self-hosted`**, a gating job still `queued` after the wait may be waiting for one of the repository's own runners; the config's `Runs on:` line says how to tell. Take the job's labels from the queued job itself, where GitHub has already resolved its `runs-on` (the workflow file may hold only an expression, such as one reading a runner-picking job's output):
 
 ```
-gh api orgs/it-works-on-local-dev/actions/runners --jq '.runners[] | select(any(.labels[]; .name == "local-linux")) | "\(.name) \(.status) busy=\(.busy)"'
+gh api --paginate repos/{owner}/{repo}/actions/runs/<run-id>/jobs --jq '.jobs[] | select(.status == "queued") | "\(.name) \(.labels | join(","))"'
 ```
 
-- **Any runner `online`:** the job is queued behind other work, since the picker counts a busy Mac as online. Wait again; re-running would only queue it again. If it's still queued after a second wait, tell the user.
-- **None `online`** (all `offline`, or none listed on two checks a minute apart, since an ephemeral runner is briefly unregistered between jobs): the job waits until the Mac is back, or until GitHub cancels it after 24 hours, so don't wait it out. Recover it per the documentation the config's `Recovering a stuck run` line points to (if it says `none`, the steps here are all there is): cancel the run, then re-run all its jobs (`gh run rerun <run-id>`, not `--failed`) so the picker runs again and falls back to hosted runners. If it's still stuck after that, tell the user.
-- **The command errors** (a 403 when the token can't read runners): you can't tell a busy Mac from an offline one, so don't guess. Tell the user the job is queued and ask whether the Mac is awake: if it is, wait again; if not, recover the run as above. Never suggest widening the `gh` token's scopes, since `admin:org` grants full org admin to read one list.
+A runner can take the job only when it carries all of the job's labels, compared without regard to case, as GitHub does. Check the runners registered to the repository itself, and, when the repository's owner (`<owner>`, from `gh repo view --json owner --jq .owner.login`) is an organisation (`gh api repos/{owner}/{repo} --jq .owner.type` prints `Organization`), the organisation's runners too; a personal account (`User`) has no organisation runners, so check only the repository's. In each command, `<labels>` is the job's labels as a JSON array, such as `["self-hosted","linux"]`. Listing an organisation's runners needs a token that can read its self-hosted runners: an organisation admin's classic token with the `admin:org` scope (a default `gh auth login` doesn't grant it), or a fine-grained token with "Self-hosted runners: Read".
+
+```
+gh api --paginate repos/{owner}/{repo}/actions/runners --jq '.runners[] | select((<labels> | map(ascii_downcase)) - [.labels[].name | ascii_downcase] == []) | "\(.name) \(.status) busy=\(.busy)"'
+gh api --paginate orgs/<owner>/actions/runners --jq '.runners[] | select((<labels> | map(ascii_downcase)) - [.labels[].name | ascii_downcase] == []) | "\(.name) \(.status) busy=\(.busy)"'
+```
+
+- **Any matching runner `online`** in either list, even if the other listing errored: the job is queued behind other work, since a busy runner still counts as online. Wait again; re-running would only queue it again. If it's still queued after a second wait, tell the user.
+- **None `online`**, and every listing that applies ran without an error (every matching runner `offline`, or no matching runner listed on two checks a minute apart, since an ephemeral runner is briefly unregistered between jobs): the job waits until a runner is back, or until GitHub cancels it after 24 hours, so don't wait it out. Recover it per the documentation the config's `Recovering a stuck run` line points to (if it says `none`, the steps here are all there is): cancel the run, then re-run all its jobs (`gh run rerun <run-id>`, not `--failed`) so a job that picks a runner, where the repository has one, runs again and can fall back to hosted runners. If it's still stuck after that, tell the user.
+- **A listing command errors** and no other list shows a matching runner `online` (a 403 when the token can't read runners): you can't tell a busy runner from an offline one, so don't guess. Tell the user the job is queued and ask whether the runner's machine is up: if it is, wait again; if not, recover the run as above. Never suggest widening the `gh` token's scopes, since `admin:org` grants full organisation admin to read one list.
 
 Green CI is policy, not something GitHub enforces: GitHub's Free plan can't make a check required on a private repository, so nothing but this skill stops a merge past a red or missing check. Wait for CI after every push to an open PR, and never merge unless it's green for the exact head being merged. It's in addition to the targeted tests in step 6.
 
@@ -151,7 +158,7 @@ If the config's Review section says `Reviewer: none`, skip this loop: there's no
 
 Otherwise, the reviewer is the one the config's `Reviewer:` line names, from the workflow file it names (`.github/workflows/<review workflow>`). In the commands below:
 
-- `<bot>` is its REST login from the `Reviewer:` line (e.g. `iwol-reviewer[bot]`).
+- `<bot>` is its REST login from the `Reviewer:` line (of the form `<app>[bot]`, e.g. `my-review-app[bot]`).
 - `<summary marker>` is the line that identifies a summary comment, from the `Clean:` and `Counting review rounds:` lines (for the shared Claude review workflow, `Reviewed head: `, followed by the full 40-character SHA of the commit the review started from).
 - The in-progress signal, the request-failure reply, the didn't-finish reply and the failed checks are the ones the config's `In progress:`, `Requesting a review:` and `Usage limit:` lines describe.
 
@@ -176,7 +183,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
    - **Summary for the head listing issues:** findings. Each one is an inline comment from the bot created since the round started; note the ids. If the summary lists an issue with no inline comment, it's still a finding: answer it in a PR comment.
    - **The request-failure reply** (for the shared Claude review workflow, a bot comment starting "Claude review request failed:"): your request comment didn't parse. Fix it and post again.
    - **The didn't-finish reply** (for the shared Claude review workflow, a bot comment starting "Claude review didn't finish"), **or a failed review check** the config's `Usage limit:` line names: the run failed, hit its time limit, or was cancelled. Retry once, the way the `Usage limit:` line says:
-     - **A failed automatic or toggle-triggered review** (a red review check): re-run the whole run with `gh run rerun <run-id>`, finding the run with `gh run list --workflow <review workflow> --branch <branch>`. Not `--failed`: that keeps the runner picked on the first attempt, so a review that failed because the Mac went offline would wait for it again. That also clears the red check, which a request comment can't.
+     - **A failed automatic or toggle-triggered review** (a red review check): re-run the whole run with `gh run rerun <run-id>`, finding the run with `gh run list --workflow <review workflow> --branch <branch>`. Not `--failed`: that keeps the runner picked on the first attempt, so a review that failed because that runner went offline would wait for it again; re-running all jobs lets any runner-picking job pick again. That also clears the red check, which a request comment can't.
      - **A failed requested review:** post the request again (step 7).
 
      If the retry fails too, stop and give the user the run link.
