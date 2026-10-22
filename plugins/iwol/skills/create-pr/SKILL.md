@@ -75,14 +75,14 @@ The loop's `sha=$(git rev-parse HEAD)` is the commit you just pushed. When mergi
 **Under `self-hosted`**, a gating job still `queued` after the wait may be waiting for one of the repository's own runners; the config's `Runs on:` line says how to tell. Take the job's labels from the queued job itself, where GitHub has already resolved its `runs-on` (the workflow file may hold only an expression, such as one reading a runner-picking job's output):
 
 ```
-gh api repos/{owner}/{repo}/actions/runs/<run-id>/jobs --jq '.jobs[] | select(.status == "queued") | "\(.name) \(.labels | join(","))"'
+gh api --paginate repos/{owner}/{repo}/actions/runs/<run-id>/jobs --jq '.jobs[] | select(.status == "queued") | "\(.name) \(.labels | join(","))"'
 ```
 
-A runner can take the job only when it carries all of the job's labels. Check the runners registered to the repository itself, and, when the repository's owner (`<owner>`, from `gh repo view --json owner --jq .owner.login`) is an organisation (`gh api repos/{owner}/{repo} --jq .owner.type` prints `Organization`), the organisation's runners too; a personal account (`User`) has no organisation runners, so check only the repository's. In each command, `<labels>` is the job's labels as a JSON array, such as `["self-hosted","linux"]`. Listing an organisation's runners needs a token that can read its self-hosted runners: an organisation admin's classic token with the `admin:org` scope (a default `gh auth login` doesn't grant it), or a fine-grained token with "Self-hosted runners: Read".
+A runner can take the job only when it carries all of the job's labels, compared without regard to case, as GitHub does. Check the runners registered to the repository itself, and, when the repository's owner (`<owner>`, from `gh repo view --json owner --jq .owner.login`) is an organisation (`gh api repos/{owner}/{repo} --jq .owner.type` prints `Organization`), the organisation's runners too; a personal account (`User`) has no organisation runners, so check only the repository's. In each command, `<labels>` is the job's labels as a JSON array, such as `["self-hosted","linux"]`. Listing an organisation's runners needs a token that can read its self-hosted runners: an organisation admin's classic token with the `admin:org` scope (a default `gh auth login` doesn't grant it), or a fine-grained token with "Self-hosted runners: Read".
 
 ```
-gh api repos/{owner}/{repo}/actions/runners --jq '.runners[] | select(<labels> - [.labels[].name] == []) | "\(.name) \(.status) busy=\(.busy)"'
-gh api orgs/<owner>/actions/runners --jq '.runners[] | select(<labels> - [.labels[].name] == []) | "\(.name) \(.status) busy=\(.busy)"'
+gh api --paginate repos/{owner}/{repo}/actions/runners --jq '.runners[] | select((<labels> | map(ascii_downcase)) - [.labels[].name | ascii_downcase] == []) | "\(.name) \(.status) busy=\(.busy)"'
+gh api --paginate orgs/<owner>/actions/runners --jq '.runners[] | select((<labels> | map(ascii_downcase)) - [.labels[].name | ascii_downcase] == []) | "\(.name) \(.status) busy=\(.busy)"'
 ```
 
 - **Any matching runner `online`** in either list: the job is queued behind other work, since a busy runner still counts as online. Wait again; re-running would only queue it again. If it's still queued after a second wait, tell the user.
