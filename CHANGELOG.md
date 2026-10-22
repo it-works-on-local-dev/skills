@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/it-works-on-local-dev/skills/compare/v1.0.0...v1.1.0) (2026-10-22)
+
+
+### Features
+
+* ship once-per-wave generated files in one refresh PR per wave ([#13](https://github.com/it-works-on-local-dev/skills/issues/13)) ([d70cc29](https://github.com/it-works-on-local-dev/skills/commit/d70cc298afa5e8c00c3ff877ce4dcabbb204b78f))
+
+
+### Bug Fixes
+
+* have setup write a picker job that starts only when a review might follow ([#11](https://github.com/it-works-on-local-dev/skills/issues/11)) ([efd1d4f](https://github.com/it-works-on-local-dev/skills/commit/efd1d4f99346be955e60a440ffa8bb2297418829))
+
 ## 1.0.0 (2026-10-22)
 
 
