@@ -13,9 +13,11 @@ jobs:
     uses: it-works-on-local-dev/code-review/.github/workflows/claude-code-review.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       REVIEW_APP_PRIVATE_KEY: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
     with:
       review-app-client-id: ${{ vars.REVIEW_APP_CLIENT_ID }}
+      default-credential: oauth
       approve: true
       checks: |
         run_step setup claude-code npm install -g @anthropic-ai/claude-code
