@@ -36,10 +36,12 @@ The format and refresh lines run once after changes land, in the order listed, b
 
 Rebuilt by tooling, never copied between branches, and allowed to be touched by more than one bead in a wave. Delete the table if there are none.
 
-| File | Rebuild when | Rebuild with | Restore the wave branch with |
-| --- | --- | --- | --- |
-| `<lockfile>` | `<a manifest changed>` | `<install command>` | `<install command>` |
-| `<generated file>` | `<its inputs changed>` | `<command>` | `<command, or "nothing">` |
+**Ships** says which PR carries the file. `with each bead PR`: each bead's PR rebuilds and carries it. `once per wave`: bead PRs leave it out, and once every bead's PR has merged, one refresh PR cut from `main` rebuilds and ships it; for output nearly every bead changes, such as a knowledge graph the post-wave refresh rebuilds, so the bead PRs don't all conflict on it. A row with no Ships value ships with each bead PR.
+
+| File | Rebuild when | Rebuild with | Restore the wave branch with | Ships |
+| --- | --- | --- | --- | --- |
+| `<lockfile>` | `<a manifest changed>` | `<install command>` | `<install command>` | `with each bead PR` |
+| `<generated file>` | `<its inputs changed>` | `<command>` | `<command, or "nothing">` | `<with each bead PR or once per wave>` |
 
 ## Local services
 
