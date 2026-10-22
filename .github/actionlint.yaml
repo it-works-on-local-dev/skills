@@ -1,0 +1,10 @@
+# actionlint 1.7.12 ships stale metadata for actions/create-github-app-token@v3:
+# it still lists `app-id` as required and doesn't know `client-id`, which the
+# action's current manifest accepts. Ignore those two messages for release.yml
+# only. Delete this file once actionlint ships fixed metadata
+# (rhysd/actionlint issue 669).
+paths:
+  .github/workflows/release.yml:
+    ignore:
+      - 'missing input "app-id" which is required by action "actions/create-github-app-token@v3".*'
+      - 'input "client-id" is not defined in action "actions/create-github-app-token@v3".*'

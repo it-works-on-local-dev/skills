@@ -1,0 +1,38 @@
+# release-please keeps one Release PR open on main. Merging it makes this run
+# create the vX.Y.Z tag and the GitHub Release; nothing deploys.
+#
+# The token comes from the organisation's release GitHub App rather than the
+# workflow's own GITHUB_TOKEN: a push made with GITHUB_TOKEN doesn't trigger
+# other workflows (so the Release PR would get no CI), and the app is scoped
+# to releases.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Mint release app token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Run release-please
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
