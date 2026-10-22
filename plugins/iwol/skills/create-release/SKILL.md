@@ -162,7 +162,7 @@ The merge's push runs the release workflow, which creates the `vX.Y.Z` tag and t
 for _ in $(seq 36); do gh release view vX.Y.Z --json tagName,url,isPrerelease --jq '"\(.tagName) \(.url) prerelease=\(.isPrerelease)"' 2>/dev/null && break; sleep 5; done
 ```
 
-If nothing prints, check the release run for the merge's commit on `main` (`gh run list --workflow <release-workflow> --branch main --limit 3`) and report what it shows. Don't create the tag or the GitHub Release yourself.
+If nothing prints, check the release run for the merge's commit, the merged Release PR's own merge commit (`gh pr view <PR> --json mergeCommit --jq .mergeCommit.oid`, then `gh run list --workflow <release-workflow> --commit <merge-commit> --json databaseId,status,conclusion,url`), and report what it shows. Don't create the tag or the GitHub Release yourself.
 
 **With a separate deploy workflow,** find the tag's deploy run. For a tag push the run's branch field is the tag name, so filter on it (the run can take a few seconds to appear):
 
@@ -181,15 +181,14 @@ gh run watch <run-id> --exit-status
 
 Other workflows the tag push runs don't gate the production deploy; mention them in the report only if one failed.
 
-**With no separate deploy workflow** (**Deploy workflow** is `none` or the release workflow itself), there is no deploy run to find: don't look one up on the tag. Watch the release workflow's run for the merge commit on `main`, the same workflow step 2 checked for the Release PR. The merge commit is `origin/main`'s commit after a fresh fetch:
+**With no separate deploy workflow** (**Deploy workflow** is `none` or the release workflow itself), there is no deploy run to find: don't look one up on the tag. Watch the release workflow's run for the merge commit on `main`, the same workflow step 2 checked for the Release PR. The merge commit is the merged Release PR's own merge commit, not `origin/main`, which a later merge can have moved past it; read it, then list the release runs for exactly that commit:
 
 ```
-git fetch origin
-git rev-parse origin/main
-gh run list --workflow <release-workflow> --branch main --limit 5 --json databaseId,status,conclusion,headSha,url
+gh pr view <PR> --json mergeCommit --jq .mergeCommit.oid
+gh run list --workflow <release-workflow> --commit <merge-commit> --json databaseId,status,conclusion,url
 ```
 
-Take the run whose `headSha` equals that commit (it can take a few seconds to appear; list again for up to about two minutes, and if it still doesn't appear, report that and stop). Watch it to completion as a background Bash command (`run_in_background`) with a long `timeout` (`3600000`, an hour):
+Take the run that lists (it can take a few seconds to appear; list again for up to about two minutes, and if it still doesn't appear, report that and stop). Watch it to completion as a background Bash command (`run_in_background`) with a long `timeout` (`3600000`, an hour):
 
 ```
 gh run watch <run-id> --exit-status
