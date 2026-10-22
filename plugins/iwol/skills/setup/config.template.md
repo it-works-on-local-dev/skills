@@ -7,7 +7,7 @@ beads-summary-and-test, beads-pr) and the PR and release skills.
 
 To adopt the plugin in a repository:
 1. Enable it. The machine needs the iwol marketplace registered (see the README of
-   it-works-on-local-dev/tooling), and the plugin enabled, either through /plugin or by
+   it-works-on-local-dev/skills), and the plugin enabled, either through /plugin or by
    committing .claude/settings.json with {"enabledPlugins": {"iwol@iwol": true}}.
 2. Start a new Claude Code session there and run /iwol:setup. It writes .claude/iwol-config.md
    from this template (migrating an old .claude/beads-config.md if there is one), enables the
@@ -54,9 +54,10 @@ Always untracked here. Never stage them: `<paths, or "none">`.
 
 Describe the bot that reviews PRs, or write "Reviewer: none". With no reviewer, a PR is clean once its CI passes and every review thread from people is answered.
 
-The lines below describe the org's shared Claude review workflow (`claude-code-review.yml` in it-works-on-local-dev/tooling), which a repository calls from the stub `/iwol:setup` writes. For that reviewer, keep them and fill in the placeholders. For any other reviewer, replace each value with that reviewer's own signals, keeping the labels.
+The lines below describe the Claude review workflow in it-works-on-local-dev/code-review, which a repository calls from the stub `/iwol:setup` writes. For that reviewer, keep them and fill in the placeholders. For any other reviewer, replace each value with that reviewer's own signals, keeping the labels.
 
-- **Reviewer:** the shared Claude review workflow, called from `.github/workflows/<stub file, e.g. claude-code-review.yml>`, posting as `iwol-reviewer[bot]` (GraphQL login `iwol-reviewer`).
+- **Reviewer:** the shared Claude review workflow, called from `.github/workflows/<stub file, e.g. claude-code-review.yml>`, posting as `<slug>[bot]` (GraphQL login `<slug>`), where `<slug>` is the stub's `review-app-slug` input, or as `<app>[bot]` read from the bot's comments in PR history when the stub has no `review-app-slug`.
+- **Review workflow ref:** `<v1 | main>`. The ref the stub calls the workflow at: `v1` moves only to compatible releases of the workflow; `main` follows every merge.
 - **When it reviews:** by itself when a PR opens ready or is marked ready (not drafts, fork PRs or PRs opened by bots); after that only on request, so every later push needs a request. If a reviewer reviews every push by itself, or can't be asked, the skills never request reviews.
 - **Requesting a review:** comment a line starting `/review` on the PR, optionally `/review [model] [effort]` (default `<the stub's default-model, or opus>` at `<the stub's default-effort, or xhigh>`). A request that doesn't parse gets a bot reply starting "Claude review request failed:" and doesn't count.
 - **In progress:** a running `Claude / review` check for an automatic review (GitHub's UI shows it as `Code Review / Claude / review`; match on `Claude / review`), or a 👀 on the request comment for a requested one. The 👀 stays, so only a later summary or failure reply ends a round; only bot comments newer than the request count. An automatic review also leaves a 👀 on the PR description, which stays from the first review on, so it never marks a review in progress.
@@ -64,15 +65,15 @@ The lines below describe the org's shared Claude review workflow (`claude-code-r
 - **Findings:** inline comments from the bot, one per finding. The summary starts with an `### N issue(s) found` heading (`### 1 issue found`, `### 2 issues found`) in place of the clean heading, then lists each finding as one `- ` line; an older summary lists them with no heading, in place of "No issues found.". No priority badges; take priority from the wording. A summary line with no inline comment is still a finding.
 - **Counting review rounds:** count the bot's summary comments, the ones with a `Reviewed head: ` line. GitHub records an empty `COMMENTED` review per inline comment, so GitHub's review count overcounts.
 - **Resolved findings count as clean:** `<yes or no>`. Yes means a review on the head commit counts as clean once every thread from it has an outcome reply and is resolved, but never a review that requests changes or says it was partial. Say no if the reviewer always gives an explicit clean signal or approval.
-- **Usage limit:** no message of its own. A failed, timed-out or cancelled review gets a bot comment starting "Claude review didn't finish" for a requested review, or a red `Claude / review` check for an automatic one. A red `Claude / request` or `Claude / runner / …` check with a skipped `Claude / review` also means the automatic review failed. A red `Claude / checks` stays out of it: the review still runs and reports the checks as unavailable. Each run, a failed one included, uploads the artifact `claude-review-pr<PR>-<sha>-attempt<n>` with the execution log, the check output and the diffs it read, kept for 14 days. Retry an automatic review with `gh run rerun <run-id>` (all jobs, so the runner is picked again); retry a requested one with a new `/review`.
-- **Review rules:** generic rules live in the shared workflow's prompt; repository-specific ones in `<file, e.g. AGENTS.md, or "none">`, read from the base branch.
+- **Usage limit:** no message of its own. A failed, timed-out or cancelled review gets a bot comment starting "Claude review didn't finish" for a requested review, or a red `Claude / review` check for an automatic one. A red `Claude / request` check with a skipped `Claude / review` also means the automatic review failed. Only when the stub has a picker job (a `pick` job named `Runner` that the review job needs), a red `Runner / …` check with a skipped `Claude / review` means the automatic review failed too; a repository without a picker job drops that sentence. A red `Claude / checks` stays out of it: the review still runs and reports the checks as unavailable. Each run, a failed one included, uploads the artifact `claude-review-pr<PR>-<sha>-attempt<n>` with the execution log, the check output and the diffs it read, kept for 14 days. Retry an automatic review with `gh run rerun <run-id>` (all jobs, so every job runs again, and a picker job picks the runner again if the stub has one); retry a requested one with a new `/review`.
+- **Review rules:** generic rules live in the workflow's prompt; repository-specific ones in `<file, e.g. AGENTS.md, or "none">`, read from the base branch.
 
 ## CI
 
 Write "CI: none" if no workflow runs on PRs.
 
 - **Workflow:** `<workflow file in .github/workflows/, e.g. ci.yml>`, gating job `<job name, e.g. check>`. Name every job a PR's CI has to pass, e.g. jobs `check` and `database`.
-- **Runs on:** `<picker | hosted>`. `picker` means CI's jobs run where the org's runner picker (`pick-runner.yml` in it-works-on-local-dev/runners) sends them: the Mac's self-hosted runners when they're online, GitHub-hosted ones otherwise. A job still `queued` once its run is `in_progress` can then be waiting for the Mac. `hosted` means GitHub-hosted runners only, so a queued job is only waiting for GitHub.
+- **Runs on:** `<hosted | self-hosted: <how to tell a queued job is waiting for one, and where recovering a stuck run is documented>>`. `hosted` means GitHub-hosted runners only, so a queued job is only waiting for GitHub. `self-hosted` means some gating job runs on the repository's own runners, so a job still `queued` once its run is `in_progress` can be waiting for one of them; the line then says how to tell and where recovering a stuck run is documented. A job that picks a runner and falls back to GitHub-hosted ones when none is online is one example of how a repository ends up here.
 - **Recovering a stuck run:** `<where it's documented, e.g. docs/DEPLOYMENT.md § CI runners, or "none">`
 - **Waiting for CI:** after a push, a PR skill waits for the run on the pushed commit with this loop, run in the background. It prints `<run id> completed <conclusion>` when the run finishes, or each job's status after 20 minutes; a `null null null` there means no run started for the commit.
 
@@ -105,7 +106,7 @@ Write "Releases: none" if the repository has no release flow for the skills to d
 
 - **Release PR branch:** `<the Release PR's head branch, e.g. release-please--branches--main--components--<component>>`
 - **Release workflow:** `<workflow file that creates the tag and the GitHub Release when the Release PR merges, e.g. release.yml>`
-- **Deploy workflow:** `<workflow file the tag push runs, e.g. deploy.yml>`, gated by `<what has to pass before it deploys, e.g. lint, typecheck and unit tests in the same workflow>`.
-- **Production version:** `<URL that reports the running build's version, e.g. https://example.app/api/version>`, answering `<the response's shape, e.g. {"version":"X.Y.Z"}, where builds other than production add "+<commit>">`.
+- **Deploy workflow:** `<workflow file the tag push runs, e.g. deploy.yml>`, gated by `<what has to pass before it deploys, e.g. lint, typecheck and unit tests in the same workflow>`. May be `none`, or the release workflow itself when the only deploy step is moving a tag (as a workflow that moves a `v<major>` tag to each release does). With no deploy workflow, `/iwol:create-release` watches only the release workflow's run.
+- **Production version:** `<URL that reports the running build's version, e.g. https://example.app/api/version>`, answering `<the response's shape, e.g. {"version":"X.Y.Z"}, where builds other than production add "+<commit>">`. May be `none`, for a repository whose releases deploy nothing. With no production version, `/iwol:create-release` skips verification and reports the created tag and GitHub Release instead.
 - **Migrations to check before a release:** `<directories whose new migrations a release must be inspected for, e.g. prisma/migrations and prisma-auth/migrations, or "none">`
 - **Rollback:** `<where rolling back is documented, e.g. docs/DEPLOYMENT.md § Rollback>`
