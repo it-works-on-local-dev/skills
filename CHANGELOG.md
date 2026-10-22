@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/it-works-on-local-dev/skills/compare/v1.1.0...v1.2.0) (2026-10-22)
+
+
+### Features
+
+* have setup ask which Claude credential the review stub passes ([#14](https://github.com/it-works-on-local-dev/skills/issues/14)) ([164a8af](https://github.com/it-works-on-local-dev/skills/commit/164a8afce2dd8834756d22a11031a4b43569d523))
+
 ## [1.1.0](https://github.com/it-works-on-local-dev/skills/compare/v1.0.0...v1.1.0) (2026-10-22)
 
 
