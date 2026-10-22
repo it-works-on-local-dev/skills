@@ -182,7 +182,7 @@ Run this step only when Step 1's answer is the public Claude review workflow; wi
 
 - **Read only names, never values.** Repository secrets: `gh secret list --json name --jq '.[].name'`. Repository variables: `gh variable list --json name --jq '.[].name'` (a plain `gh variable list` prints values too). Organisation secrets and variables shared with this repository: `gh api repos/{owner}/{repo}/actions/organization-secrets --jq '.secrets[].name'` and `gh api repos/{owner}/{repo}/actions/organization-variables --jq '.variables[].name'`. If a call is refused, say which list you couldn't read instead of calling its names missing.
 - **Report which of these are set and which are missing:**
-  - the Claude credential secrets the user chose (Step 3), `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or both: name each one that isn't set yet. At least one must be set; say so when neither is. Where the credential choice is offered and the user chose both but only one is set, a review on the other fails: a `/review` line naming it gets a failure reply, and when `default-credential` names it, so does every review that names no credential, the automatic one included;
+  - the Claude credential secrets the user chose (Step 3), or, in the review workflow's own repository, where Step 3 is skipped, the ones its local stub passes, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or both: name each one that isn't set yet. At least one must be set; say so when neither is. Where the credential choice is offered and the user chose both but only one is set, a review on the other fails: a `/review` line naming it gets a failure reply, and when `default-credential` names it, so does every review that names no credential, the automatic one included;
   - secret `REVIEW_APP_PRIVATE_KEY`, required;
   - variable `REVIEW_APP_CLIENT_ID`, required;
   - secret `RUNNER_STATUS_TOKEN`, only when the stub has a picker job: required for the picker to pick; without it the picker falls back to GitHub-hosted runners.
@@ -224,7 +224,7 @@ Run this step only when Step 1's answer is the public Claude review workflow; wi
 - the picker block, the `pick` job, plus the `review` job's `needs: pick` and `runs-on:`, only when the user turned self-hosted runners on, with their own picker's path in place of the example if they have one;
 - `review-app-slug`, and the line of the `pick` job's `if:` that matches a comment mentioning `@<slug>` (the same slug), only when the user wants the bot to respond to mentions: without the input the workflow ignores mentions, so the picker needn't start for them. Drop that one line only; the `) &&` line after it stays;
 - each Claude credential line, for the credentials the user chose;
-- `default-credential`, only when Step 3's `default-credential` item says to write it: the workflow at the ref offers the credential choice and the user chose both credentials.
+- `default-credential`, only when Step 3's `default-credential` item says to write it.
 
 Where the workflow at the ref doesn't offer the credential choice, the `issue_comment` comment ends at `[effort]`, without `[oauth|api-key]`.
 
