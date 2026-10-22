@@ -1,5 +1,6 @@
 {
   "name": "iwol",
-  "description": "Shared Claude Code skills and worker agents for it-works-on-local-dev repositories: the beads workflow, grill-me, and the PR and release flows.",
+  "version": "0.0.0",
+  "description": "Claude Code skills and worker agents: the beads workflow, grill-me, and the PR and release flows.",
   "author": { "name": "it-works-on-local-dev" }
 }
