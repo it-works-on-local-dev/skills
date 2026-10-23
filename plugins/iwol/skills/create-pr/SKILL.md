@@ -189,7 +189,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
      If the retry fails too, stop and give the user the run link.
    - **A request the `Usage limit:` line says to stop on** (for the shared Claude review workflow, a request with no 👀 whose own run ended any other way, or for which no run matches): don't post another request; stop and tell the user, with the link that line names.
 
-   A review takes 5–10 minutes. Poll every ~30 s for the first ~6 minutes, then every 1–2 minutes, ideally in a background loop (`run_in_background`) that exits on a summary, a failure notice, a failed review check, or, once a request has had no 👀 for a few minutes, its own run ending the way the `Usage limit:` line describes. A review started by opening, marking ready or toggling posts no failure notice; a red check is its only sign. If nothing has arrived after ~20 minutes, tell the user instead of polling indefinitely.
+   A review takes 5–10 minutes. Poll every ~30 s for the first ~6 minutes, then every 1–2 minutes, ideally in a background loop (`run_in_background`) that exits on a summary, a failure notice, a failed review check, or, once a request has had no 👀 for a few minutes, whatever the `Usage limit:` line says ends it (for the shared Claude review workflow with a picker job, its own run ending, no run matching it, or, without the stub's `run-name:`, the missing 👀 itself). A review started by opening, marking ready or toggling posts no failure notice; a red check is its only sign. If nothing has arrived after ~20 minutes, tell the user instead of polling indefinitely.
 
    **Clean → merge without waiting for confirmation** (green CI for the head still gates it; see [Merging](#merging)).
 
