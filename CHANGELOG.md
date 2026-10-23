@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/it-works-on-local-dev/skills/compare/v1.2.0...v1.2.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* say how a requested review's failed runner pick shows ([#17](https://github.com/it-works-on-local-dev/skills/issues/17)) ([9363128](https://github.com/it-works-on-local-dev/skills/commit/9363128c6fae4b4a50f9db207606fbb88a24103c))
+
 ## [1.2.0](https://github.com/it-works-on-local-dev/skills/compare/v1.1.0...v1.2.0) (2026-10-22)
 
 
