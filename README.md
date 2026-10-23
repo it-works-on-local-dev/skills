@@ -144,10 +144,6 @@ CI runs, on every pull request and on every push to `main`:
 - `claude plugin validate .`, for the marketplace;
 - `claude plugin validate plugins/iwol`, for the plugin.
 
-## History
-
-The plugin's history before this repository, including its earlier pull requests, is in the private `it-works-on-local-dev/tooling` repository.
-
 ## License
 
 [MIT](LICENSE).
