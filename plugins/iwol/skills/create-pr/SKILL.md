@@ -180,7 +180,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
 
    - **No summary for the head yet:** reviewing; keep polling. An automatic or toggle-triggered review shows the pending check the config's `In progress:` line names, and a requested review gets a 👀 on your request comment. The 👀 marks the start and stays after the review ends, so only a summary or a failure notice ends the round, or, for a request that still has no 👀 after a few minutes, what the config's `In progress:` and `Usage limit:` lines say about it (for the shared Claude review workflow with a picker job, the outcome of the request's own run, looked up the way the `Usage limit:` line says).
    - **Summary for the head with no findings** (for the shared Claude review workflow, starting with the heading `### No issues found! 🚀`, or with the plain line `No issues found.` in a summary from before that heading): a clean pass, unless it also says the review was partial (a changed file it couldn't inspect; for the shared Claude review workflow, a line starting `Partial review:`, or in an older summary the reviewer's own words). Then request another review (step 7).
-   - **Summary for the head listing issues:** findings. Each one is an inline comment from the bot created since the round started; note the ids. If the summary lists an issue with no inline comment, it's still a finding: answer it in a PR comment.
+   - **Summary for the head listing issues:** findings. Each one is an inline comment from the bot created since the round started; note the ids. If the summary lists an issue with no inline comment, it's still a finding: answer it in a PR comment. From the PR's 4th summary on, step 2's round limit applies.
    - **The request-failure reply** (for the shared Claude review workflow, a bot comment starting "Claude review request failed:"): your request comment didn't parse. Fix it and post again.
    - **The didn't-finish reply** (for the shared Claude review workflow, a bot comment starting "Claude review didn't finish"), **or a failed review check** the config's `Usage limit:` line names, **or a request's own run** that line counts as failed (for the shared Claude review workflow with a picker job, a request with no 👀 whose run concluded `failure`, `cancelled` or `timed_out`): the run failed, hit its time limit, or was cancelled. First look for the error the `Usage limit:` line says it quotes (for the shared Claude review workflow, after "Claude stopped with an error:" in the reply, or in the red check's `Claude review failed` annotation, which `gh run view <run-id>` lists, with the run found as below):
      - **An error a retry won't fix**, such as a usage limit, a billing error like "Credit balance is too low", or a rejected credential: don't retry. Stop and tell the user, quoting the error, and retry only once they say it's sorted.
@@ -205,6 +205,8 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
    ```
 
    Each output line gives a workflow run id and the artifact name; download each one you need into its own new directory with the second command.
+
+   **Round limit.** From the PR's 4th summary on (counted as step 7 says), stop here once each finding is evaluated: summarize each round (findings, resolutions, what's still open), and ask the user, for each finding, with your call on it, to **proceed** (fix it, as steps 3–5 say, even where your call was to decline it; once the fix is pushed, step 7 requests one more review), **defer** (reply that it's left for a follow-up and why, resolve it `WONT_FIX`, and list it as a follow-up for the user), or **decline** (reply why, and resolve it as step 5 says). Fix, reply to or resolve none of them until they answer.
 
 3. **Fix the findings you agree with** in the working tree, then wait for the go-ahead to push ([Changes to an already-open PR](#changes-to-an-already-open-pr)).
 4. **Reply to every finding in its own thread**, after its fix is pushed, never before. Never combine findings into one PR comment, and never leave one unanswered.
@@ -248,14 +250,14 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
 
 6. **All findings declined, nothing pushed?** Once the user agrees with those calls, reply and resolve right away, then **end the loop without a re-review**. The reviewer would re-review the same commit and most likely repeat itself, and a clean pass on unchanged code proves nothing. Merging needs the user's explicit confirmation. A round with at least one pushed fix goes on to step 7.
 7. **Request a re-review** once every thread is resolved and the fix is pushed and CI is green for the new head. The CI wait ([CI check](#ci-check)) tells you when; request it then, without asking the user. **Check the stop limits first.** Stop and hand back to the user, with no re-review, if either applies:
-   - **The round just handled was all repeats** of already-decided findings; the next round won't differ.
+   - **The round just handled was all repeats** of already-decided findings; the next round won't differ. A round where the user chose **proceed** at the round limit (step 2) gets its one more review anyway.
    - **The PR already has 4 reviewer summaries** (the first review plus 3 re-reviews). This stop is hard: count, don't estimate. Count the way the config's `Counting review rounds:` line says: list the PR's issue comments, keep the bot's, and count the bodies containing the summary marker:
 
      ```
      gh api --paginate repos/{owner}/{repo}/issues/<PR>/comments --jq '.[] | select(.user.login=="<bot>" and (.body | contains("<summary marker>"))) | .id' | wc -l
      ```
 
-     Partial reviews count, which errs toward stopping early; failure notices don't match. GitHub's own review count runs high (it records an empty review for every inline comment), so don't use it. When the count reaches 4, stop. A PR that keeps producing new findings needs rescoping, and that's the user's call.
+     Partial reviews count, which errs toward stopping early; failure notices don't match. GitHub's own review count runs high (it records an empty review for every inline comment), so don't use it. When the count reaches 4, stop, unless the user chose **proceed** for a finding at the round limit (step 2): then request the one more review it asks for, and the round limit applies again to that review's summary. A PR that keeps producing new findings needs rescoping, and that's the user's call.
 
    When stopping, summarize each round (findings, resolutions, what's still open). There's no auto-merge in this case; merging needs explicit confirmation. Otherwise, request the re-review the way the config's `Requesting a review:` line says (for the shared Claude review workflow, a `/review` comment):
 
@@ -278,7 +280,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
      The PR ends ready, as it was, so this isn't [marking a draft ready](#marking-a-draft-ready). Model, effort and credential come from the description's last `/review` line, as on the first review, so when the user asks for any of them, set that line first (`gh pr edit <PR> --body-file -`, with the whole body in a quoted heredoc, `<<'EOF'`). Name a credential there only where the config's `Requesting a review:` line offers `oauth|api-key` and says the stub passes that credential; otherwise leave it out and tell the user it can't be picked: without the choice a description line naming one doesn't parse, so the review would fall back to all the defaults, and a credential the stub doesn't pass is ignored and the default used. Editing the body starts no review. The line applies to every later toggle too, so once that round's summary arrives, put it back as it was unless the user wants it kept.
 
    Then poll again (step 1) for a summary that names the new head.
-   - **New findings:** handle them with steps 2–6. If a finding repeats one that was already decided, reply with a link to the earlier decision and resolve it with the same reason. Then return to step 7, which checks the stop limits before any further request.
+   - **New findings:** handle them with steps 2–6, with step 2's round limit from the PR's 4th summary on. If a finding repeats one that was already decided, reply with a link to the earlier decision and resolve it with the same reason. Then return to step 7, which checks the stop limits before any further request.
    - **Clean:** merge without waiting for confirmation once CI is green for the head, the same as a clean first review.
 
 ## Merging

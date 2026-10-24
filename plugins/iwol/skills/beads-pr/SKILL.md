@@ -124,6 +124,8 @@ For each item, check it against the actual code and against the review rules the
 
 Loops of 4–6 rounds came from fixing everything every time. The user decides, as with all triage.
 
+**Round limit.** From a PR's 4th reviewer summary on (the first review plus 3 re-reviews, counted the way the config's `Counting review rounds:` line says), a summary that still lists findings stops that PR's loop: put none of its findings in Fix on your own. List them with your view of each, and ask the user, for each one, to proceed (a Fix, so one more review after the push), defer (to a later bead, or to a new follow-up bead), or decline. The limit applies again to every later summary. A failing check isn't one of these findings: it still blocks the merge until it passes.
+
 Show the user the triage as one short list grouped by PR: item, priority, before or after the fixes, bucket, one-line reason. List each repair group once, after the PRs: the cause, the shared file, the items it covers on each PR, and the repair bead's labels. Wait for their go-ahead. They may move items between buckets. Deferring and declining are their decisions, not yours.
 
 Then act on it:
