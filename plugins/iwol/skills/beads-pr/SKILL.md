@@ -195,6 +195,7 @@ If the re-test list isn't empty, run it on the wave branch, kept current, becaus
      - Body: `Implements bead **<bead-id>** (wave <n> of <epic title>)` and what it does in a few lines.
      - Add its acceptance criteria and how they were verified (from the bead's close reason), and the manual test results for the steps naming this bead.
      - List any findings deferred to later beads, and end with the session's PR attribution line.
+     - Only when the user asked this run for a review model, effort or credential, and the config's `Requesting a review:` line takes `/review [model] [effort] …`: put a line `/review <what they asked for>` on its own just before the attribution line. The first review, which that reviewer starts by itself when the PR opens, reads the description's last line starting `/review`, so without the line it uses the config's defaults. Name a credential only where that line offers `oauth|api-key` and says the stub passes that credential; otherwise leave it out and tell the user it can't be picked. Without such a request, add no `/review` line.
    - Record the PR on the bead: `bd update <bead-id> --external-ref gh-<n>`.
 5. Switch back to the wave branch and restore its state (see *Branches*).
 6. Don't request reviews if the config says the reviewer reviews new PRs by itself; otherwise request one on each new PR (see *Review requests*). If the desktop app offers its Auto-fix for these PRs, don't enable it. CI failures go through triage and fix rounds, and a second fixer would push competing commits.
