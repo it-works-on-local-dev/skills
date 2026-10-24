@@ -261,7 +261,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
    gh pr comment <PR> --body "/review"
    ```
 
-   - Add a model, effort or credential only if the user asks for them, e.g. `/review fable max` or `/review api-key`.
+   - Add a model, effort or credential only if the user asks for them, e.g. `/review fable max` or `/review api-key`, and a credential only where the config's `Requesting a review:` line offers `oauth|api-key`; where it doesn't, tell the user the credential can't be picked.
    - **A PR that changes the review workflow** (the file the config's `Reviewer:` line names, or a workflow it calls by local path, `./.github/workflows/…`): don't post a request comment. GitHub runs comment-triggered workflows from `main`, so it would review with `main`'s workflow and never exercise the PR's. Toggle the PR to draft and back instead; `ready_for_review` runs the PR's own workflow. GitHub runs no `pull_request` workflows on a PR that conflicts with its base, so check `gh pr view <PR> --json mergeable --jq .mergeable` first:
      - **`MERGEABLE`:** toggle, each as its own command:
 
@@ -273,7 +273,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
      - **`CONFLICTING`:** the toggle would start nothing. Tell the user `main` has to be merged into the branch first; that's a push, so it needs their go-ahead.
      - **`UNKNOWN`:** GitHub computes it lazily after a push. Check again after a few seconds.
 
-     The PR ends ready, as it was, so this isn't [marking a draft ready](#marking-a-draft-ready). Model, effort and credential come from the description's last `/review` line, as on the first review, so when the user asks for any of them, set that line first (`gh pr edit <PR> --body-file -`, with the whole body in a quoted heredoc, `<<'EOF'`). Editing the body starts no review. The line applies to every later toggle too, so once that round's summary arrives, put it back as it was unless the user wants it kept.
+     The PR ends ready, as it was, so this isn't [marking a draft ready](#marking-a-draft-ready). Model, effort and, where the config's `Requesting a review:` line offers `oauth|api-key`, credential come from the description's last `/review` line, as on the first review, so when the user asks for any of them, set that line first (`gh pr edit <PR> --body-file -`, with the whole body in a quoted heredoc, `<<'EOF'`). Where that line doesn't offer `oauth|api-key`, leave a credential out and tell the user it can't be picked: a description line naming one doesn't parse, so the review would fall back to all the defaults. Editing the body starts no review. The line applies to every later toggle too, so once that round's summary arrives, put it back as it was unless the user wants it kept.
 
    Then poll again (step 1) for a summary that names the new head.
    - **New findings:** handle them with steps 2–6. If a finding repeats one that was already decided, reply with a link to the earlier decision and resolve it with the same reason. Then return to step 7, which checks the stop limits before any further request.
