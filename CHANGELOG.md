@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.0](https://github.com/it-works-on-local-dev/skills/compare/v1.2.1...v1.3.0) (2026-10-24)
+
+
+### Features
+
+* ask whether to proceed, defer or decline findings after 4 review rounds ([#25](https://github.com/it-works-on-local-dev/skills/issues/25)) ([8a5d830](https://github.com/it-works-on-local-dev/skills/commit/8a5d830688f7aa2271b2075356ce987c5e69cae0))
+* have beads-pr apply a requested review model, effort or credential ([#22](https://github.com/it-works-on-local-dev/skills/issues/22)) ([d8f6286](https://github.com/it-works-on-local-dev/skills/commit/d8f62869685f561ba044f9590ef08c8ac577eb47))
+
+
+### Bug Fixes
+
+* have setup list the Contents permission for the review app ([#23](https://github.com/it-works-on-local-dev/skills/issues/23)) ([6a562b3](https://github.com/it-works-on-local-dev/skills/commit/6a562b3c0540c38ff1141adb10d44d05a1118e17))
+* say a PR description's /review line also picks the first review's credential ([#20](https://github.com/it-works-on-local-dev/skills/issues/20)) ([7e64b46](https://github.com/it-works-on-local-dev/skills/commit/7e64b46cc3206bbe4a97cfcda002465d0234daa1))
+* say where a failed Claude review's reason shows ([#24](https://github.com/it-works-on-local-dev/skills/issues/24)) ([1b48193](https://github.com/it-works-on-local-dev/skills/commit/1b481934ab13b5f998255e48fc309d7d5814fa2c))
+
 ## [1.2.1](https://github.com/it-works-on-local-dev/skills/compare/v1.2.0...v1.2.1) (2026-10-23)
 
 
