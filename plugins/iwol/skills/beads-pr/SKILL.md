@@ -71,7 +71,8 @@ Gather everything fresh:
   - CI on the head, read once;
   - its review threads;
   - the reviewer's reviews and signals (see the config), plus any review of its that didn't finish (a failure reply, a failed review check, or a request's own run the config's `Usage limit:` line counts as failed) or message from it saying its usage limit is reached (see *A failed review or the reviewer's usage limit* under *Review requests*);
-  - its **review round**: the number of reviews the reviewer has given it so far, with a clean signal counting as one.
+  - its latest review request, if no summary has come since: whether it shows in progress the way the config's `In progress:` line says (for the shared Claude review workflow, a 👀 on the request comment), its age (the comment's `created_at` against now), and any request-failure reply after it (see *A request that goes nowhere* under *Review requests*);
+  - its **review round**: the number of rounds the reviewer has finished on it so far, counted the way the config's `Counting review rounds:` line says. For the shared Claude review workflow, that's the bot's summary comments, the ones with a `Reviewed head: ` line, never GitHub's review count, which records an empty review there for every inline comment. A PR's "<n>th summary" below means its <n>th round counted this way.
 
 Then work through these in order, doing every one that applies. One run can move different PRs through different steps.
 
@@ -89,7 +90,7 @@ Then work through these in order, doing every one that applies. One run can move
 5. **A bead PR is missing a change the wave branch has.** For each open bead PR, run `git diff origin/<bead-branch> <wave-branch> -- <the bead's own files>`, leaving out generated files. For a file shared by hunk, check instead that the bead branch has each of this bead's hunks exactly as the wave branch has them. Any difference means a fix never reached the PR, for example because a push failed after fix mode had already closed the bead. Do the per-bead part of **Fix round** step 6 for it: copy, rebuild the generated files that ship with each bead PR, commit, push, and request a review.
 6. **A PR conflicts with `main`, a generated file on it is stale after another bead merged, or its bead has a `Waits for <bead-id>` comment and the PR's branch doesn't have that bead's merge yet (its `Merged in PR` comment names the commit):** do **Sync with main** for it. For the refresh PR, sync as *Stage — Refresh PR* says.
 7. **A PR has a thread that is unresolved or has no outcome reply, unanswered feedback outside threads, or failing CI on the head:** do **Triage**, covering every such PR together. Then do the **Fix round**.
-8. **A PR was pushed after it opened, with no review request since:** request a review, if the reviewer needs requests (see *Review requests*).
+8. **A PR needs a review request:** it was pushed after it opened with no request since, or its latest summary is on the head and says the review was partial, triage left nothing to push to it, and nothing has been requested since that summary. Request a review, if the reviewer needs requests (see *Catch missed requests* and *A partial review* under *Review requests*). For a PR whose latest request has no summary yet, do what *A request that goes nowhere* there says instead.
 9. **A PR is clean:** do **Merge**.
 10. **Every bead's PR has merged, the config ships a generated file once per wave, the wave's refresh isn't done, and no refresh PR is open:** do **Refresh PR**.
 11. **Every bead's PR has merged, and the wave's refresh is done or the config ships no generated file once per wave:** do **Close the wave**.
@@ -98,7 +99,7 @@ Items 6–9 cover an open refresh PR too, with the differences *Stage — Refres
 
 **Blocked beads:** if a child bead is `blocked`, report it with its comment, and any changes set aside for it (`git stash list`). Its work failed checks, so it gets no PR until the user resolves it, and the wave can't close until then. Carry on with the other beads.
 
-End with one line per PR: its number, its bead (or "refresh"), and where it stands, for example "waiting on review", "CI running", "reviewer usage limit", "waiting for <bead-id> to merge", "ready to merge" or "merged".
+End with one line per PR: its number, its bead (or "refresh"), and where it stands, for example "waiting on review", "requested, not picked up yet", "CI running", "reviewer usage limit", "waiting for <bead-id> to merge", "ready to merge" or "merged".
 
 **Do not wait, poll, sleep or schedule a wake-up** for the reviewer or CI. Report what's pending and tell the user to run `/iwol:beads-pr <id>` again, in a new session, once it has landed.
 
@@ -117,7 +118,9 @@ For each item, check it against the actual code and against the review rules the
 - **Decline** — not valid, or a deliberate choice (for example, something the review rules say is intentional). Give the reason. This applies to review threads only: a failing check blocks the merge until it passes.
 - **Re-run** — a failing check caused by flaky infrastructure, a timeout or a cancellation, not by the code. With the user's OK, re-run its failed jobs (`gh run rerun <run-id> --failed`). If it fails the same way again, treat it as a Fix. A failed review check from a reviewer that *Review requests* covers isn't one: see *A failed review or the reviewer's usage limit* there.
 
-**Round budget.** From a PR's third review on (two fix rounds already), recommend this split:
+**Repeats.** A thread that repeats a finding already decided on the same PR, where the code shows nothing new, goes in the list as a repeat, with a link to the earlier decision (its outcome reply) and that decision's bucket. Once the user agrees, reply with a link to the earlier decision and resolve the thread, as the *New findings* bullet under `/iwol:create-pr`'s *Claude review loop* does (see *Every thread gets a reply and a resolution*). A repeat of a Deferred or Declined decision gets that decision's reply and reason. A repeat of a Fixed decision gets `Not changing this: already fixed in <sha> (<link>)`, resolved `INVALID`, since nothing changed for it. The user can still move it to another bucket.
+
+**Round budget.** From a PR's third reviewer summary on (two fix rounds already, counted the way the config's `Counting review rounds:` line says), recommend this split:
 
 - Fix the highest-priority issues (P1, if the reviewer uses P1–P3) and problems that earlier fixes introduced.
 - Defer older, lower-priority issues to a later bead, or to a new follow-up bead.
@@ -136,7 +139,7 @@ Then act on it:
 - **Decline** items: reply on the thread and resolve it.
 - **Re-run** items: re-run the failed jobs, and check the result on the next run.
 
-If triage leaves nothing to fix on a PR, nothing is pushed there and no new review is requested. Once every thread on it has its reply and is resolved, that PR can go to **Merge** on the reviewer's existing review.
+If triage leaves nothing to fix on a PR, nothing is pushed there and no new review is requested. Once every thread on it has its reply and is resolved, that PR can go to **Merge** on the reviewer's existing review. The exception is a partial review: once its threads are answered, request another review even though nothing was pushed (see *A partial review* under *Review requests*).
 
 ### Every thread gets a reply and a resolution
 
@@ -222,11 +225,11 @@ A bead PR needs a sync when GitHub reports it conflicts with `main`, or when ano
 
 A PR is ready when all of these hold:
 
-- **The reviewer is clean on its head.** That means one of two things:
-  - Its clean signal from the config, given after the head commit.
-  - Or, only if the config says resolved findings count as clean: its latest review is on the head commit, doesn't request changes, and every thread it raised has an outcome reply and is resolved. This happens when triage deferred or declined everything, so nothing was pushed.
+- **The reviewer is clean on its head.** Its latest review covers the head: its summary names the PR's `headRefOid` in the marker line the config's `Clean:` line describes (for the shared Claude review workflow, `Reviewed head: <full sha>`), or, for a reviewer whose `Clean:` line describes no such marker, the review's `commit_id` is `headRefOid` or its clean signal came after the head commit. And one of two things holds:
+  - That review is the config's clean signal.
+  - Or, only if the config says resolved findings count as clean: that review doesn't request changes, and every thread it raised has an outcome reply and is resolved. This happens when triage deferred or declined everything, so nothing was pushed.
 
-  A review still in progress isn't clean yet. If the config says "Reviewer: none", skip this condition.
+  A review that covers an older head ends that round but doesn't cover the new head; *Catch missed requests* under *Review requests* requests a review. A review that says it was partial isn't clean under either condition, even with no findings (see *A partial review* under *Review requests*). A review still in progress isn't clean yet. If the config says "Reviewer: none", skip this condition.
 - Every CI check on the head commit passed.
 - Every review thread on the PR has an outcome reply and is resolved, every item of feedback outside threads has been answered, and its bead has no open findings and is closed.
 - It doesn't conflict with `main`.
@@ -340,8 +343,19 @@ How to request a review, and when the reviewer reviews by itself, are in the con
 - **Never request a review when opening a PR** if the reviewer reviews new PRs by itself; it's already starting one.
 - **Don't request again while one is pending.** The config says how the reviewer shows a review in progress.
 - **Catch missed requests.** If a PR was pushed to after it opened, and there's no review request since that push (for example, someone pushed by hand), request one at the start of the run. A PR that hasn't changed since it opened needs none; it was reviewed then.
+- **A partial review:** a summary on the head that says the review was partial isn't clean, even with no findings. The config's `Clean:` line says how it shows (for the shared Claude review workflow, a line starting `Partial review:`, or in an older summary the reviewer's own words). Triage its findings as usual. If a fix round pushes to the PR, that push's request covers it. If triage leaves nothing to push, request another review once every thread from that summary has its outcome reply and is resolved, even though nothing was pushed, as the *Summary for the head with no findings* bullet under `/iwol:create-pr`'s *Claude review loop* does. From the PR's 4th summary on (see *Round limit* under *Stage — Triage*), ask the user before requesting it.
+- **A request that goes nowhere:** Step 1 reads each PR's latest request once. None of these cases retries; a retry happens only under *A failed review or the reviewer's usage limit*.
+  - **A request-failure reply** (for the shared Claude review workflow, a bot reply starting "Claude review request failed:", as the config's `Requesting a review:` line says): the request didn't parse and doesn't count, so *Catch missed requests* would request again. A plain request always parses, so the options that request named were wrong (asked for in an earlier run, or typed by hand), or something else broke. Stop and ask the user what to request, quoting the reply's error and its run link, and post nothing on that PR until they say. Then request with the options they give, and don't reuse the failed request's options unless they say so.
+  - **No in-progress sign after 5 minutes** (the request comment's `created_at` against now; for the shared Claude review workflow, still no 👀 on it): do what the config's `In progress:` and `Usage limit:` lines say. Where the `Usage limit:` line looks up the request's own run (for the shared Claude review workflow, only with a picker job and the stub's `run-name:`), look it up once by the comment's id, the way that line shows:
+    - **Not `completed` yet:** the review is still starting. Report it as pending and leave that PR for the next run.
+    - **Concluded `failure`, `cancelled` or `timed_out`:** a review that didn't finish; *A failed review or the reviewer's usage limit* covers it.
+    - **Any other conclusion** (`startup_failure`, `skipped`, or `success` with still no 👀), **or no matching run:** stop and tell the user, with the run's link, and post no further request on that PR until they say.
+
+    Where it doesn't (for the shared Claude review workflow, without a picker job or without that `run-name:`), no run can be tied to the comment: stop and tell the user, with the request comment's link, and post no further request until they say.
+  - **No in-progress sign yet, under 5 minutes:** report it as "requested, not picked up yet" and leave that PR for the next run. Don't request again; the next run reads it afresh.
 - **A failed review or the reviewer's usage limit:** a reply saying the reviewer has hit its limit, or a review that didn't finish, didn't count. A review that didn't finish is a failure reply, a failed review check, or a request's own run that the config's `Usage limit:` line counts as failed (for the shared Claude review workflow with a picker job, a request with no 👀 whose run concluded `failure`, `cancelled` or `timed_out`). If it quotes an error a retry won't fix, such as a usage limit, a billing error like "Credit balance is too low", or a rejected credential (for the shared Claude review workflow, a "Claude review didn't finish" reply that goes on "Claude stopped with an error:", or a red `Claude / review` check's `Claude review failed` annotation, which `gh run view <run-id>` lists), tell the user, quoting the error, and retry, the way the config's `Usage limit:` line says, once they say it's sorted, even when the failure was itself a retry's. A failure that quotes no error, or one a retry may fix, such as an overloaded API, gets one retry the same way. A run doesn't wait for a retry, so record each one as you make it, those the user OKs included: `bd comments add <bead-id> "Review retried on PR #<n> at <head sha>"`, on the sub-epic for the refresh PR. On a head such a comment names, only a failure after the latest one counts: a failure reply posted after it, a red review check (the rerun replaced the one it retried), or the retry request's own run that the `Usage limit:` line counts as failed. A later run that finds such a failure, quoting no error or one a retry may fix, doesn't retry again: it tells the user, with the run link.
 - **Requested review options:** only when the user asked this run for a review model, effort or credential, and the config's `Requesting a review:` line takes `/review [model] [effort] …`. Every `/review` comment the run posts names them, and every PR the run opens, bead PRs and the refresh PR alike, gets a line `/review <what they asked for>` on its own just before the attribution line in its description: the first review, which a reviewer that reviews new PRs by itself starts when the PR opens, reads the description's last line starting `/review`, so without the line it uses the config's defaults. Name a credential only where that line offers `oauth|api-key` and says the stub passes that credential; otherwise leave it out and tell the user it can't be picked. Without such a request, add nothing to a request or a description.
+- **A PR that changes the review workflow** (the file the config's `Reviewer:` line names, or a workflow that file calls by local path, `./.github/workflows/…`): don't post a request comment. GitHub runs a comment-triggered workflow from `main`, so the review would never exercise the PR's own workflow. Wherever these rules request a review on it, toggle the PR to draft and back instead, checking `mergeable` first, as *A PR that changes the review workflow* under `/iwol:create-pr`'s *Claude review loop* (`../create-pr/SKILL.md`) describes; a PR that conflicts with `main` goes through **Sync with main** first. The toggle stands in for the request comment: a later run counts the PR's latest `ready_for_review` event as its request (`gh api --paginate repos/{owner}/{repo}/issues/<n>/events --jq '.[] | select(.event == "ready_for_review") | .created_at'`), and reads the review's progress and failures as for an automatic review.
 
 ## Finding comments
 
