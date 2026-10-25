@@ -68,7 +68,7 @@ Gather everything fresh:
 
   For each open PR, the refresh PR included, gather:
   - its state, head commit, and whether it conflicts with `main` (GraphQL `mergeable`). `UNKNOWN` means GitHub is still working it out, so read it once more before relying on it;
-  - CI on the head, read once (nothing to read under `CI: none`). A gating job still `queued` is handled as *A queued gating job* below says;
+  - CI on the head, read once with `gh pr checks <n> --json name,state,bucket,link` (nothing to read under `CI: none`). Its `state` tells a `QUEUED` job from an `IN_PROGRESS` one, which the plain output lumps together as pending. A gating job still `QUEUED` is handled as *A queued gating job* below says;
   - its review threads;
   - the reviewer's reviews and signals (see the config), plus any review of its that didn't finish (a failure reply, a failed review check, or a request's own run the config's `Usage limit:` line counts as failed) or message from it saying its usage limit is reached (see *A failed review or the reviewer's usage limit* under *Review requests*);
   - its latest review request, if no summary has come since: whether it shows in progress the way the config's `In progress:` line says (for the shared Claude review workflow, a 👀 on the request comment), its age (the comment's `created_at` against now), and any request-failure reply after it (see *A request that goes nowhere* under *Review requests*);
@@ -99,12 +99,12 @@ Items 6–9 cover an open refresh PR too, with the differences *Stage — Refres
 
 **Blocked beads:** if a child bead is `blocked`, report it with its comment, and any changes set aside for it (`git stash list`). Its work failed checks, so it gets no PR until the user resolves it, and the wave can't close until then. Carry on with the other beads.
 
-**A queued gating job:** when one of the config's gating jobs on a PR's head is still `queued`, find its run and when that run started, once: `gh run list --workflow <workflow file> --commit <head sha> --json databaseId,status,startedAt` gives the run, and `gh run view <run-id> --json jobs --jq '.jobs[] | "\(.name): \(.status)"'` its jobs. `startedAt` is the latest attempt's start, so a re-run starts the clock again.
+**A queued gating job:** when one of the config's gating jobs on a PR's head, or on `main` in *Stage — Close the wave*, is still `queued`, read its run once: the check's `link` names the run (`…/actions/runs/<run-id>/job/…`), and `gh run view <run-id> --json startedAt,jobs --jq '.startedAt, (.jobs[] | "\(.name): \(.status)")'` gives when it started and its jobs. `startedAt` is the latest attempt's start, so a re-run starts the clock again.
 
 - **Under `hosted`, or a run that started 10 minutes ago or less:** the job is only waiting. Report it as "CI queued" and don't wait for it; the next run reads it again.
 - **Under `self-hosted`, and a run that started more than 10 minutes ago:** the job may be waiting for one of the repository's own runners that isn't coming. Run the diagnosis in `../create-pr/queued-ci.md` once, taking its steps for a skill that reads once, with the config's `Runs on:` line for how to tell and its `Recovering a stuck run:` line for where recovering one is documented:
   - **A matching runner is online:** report "CI queued behind other work" and don't wait for it.
-  - **None online, and every listing ran:** with the user's OK, recover the run as *Recovering the run* there says: cancel it, then re-run all its jobs. The next run reads the re-run.
+  - **Every matching runner listed is `offline`, and every listing ran:** with the user's OK, recover the run as *Recovering the run* there says: cancel it, then re-run all its jobs. The next run reads the re-run.
   - **A listing errors, or no matching runner is listed at all:** ask the user whether the runner's machine is up. If it is, report the job as queued and don't wait for it; if not, recover the run with their OK, as above.
 
 End with one line per PR: its number, its bead (or "refresh"), and where it stands, for example "waiting on review", "requested, not picked up yet", "CI running", "CI queued", "CI queued behind other work", "reviewer usage limit", "waiting for <bead-id> to merge", "ready to merge" or "merged".
@@ -294,7 +294,7 @@ The sub-epic records it: `Refresh PR #<n>` when it opens, and `Refresh merged in
 
 1. Confirm that every child bead is closed, every bead with files has a merged PR, and, when the config ships a generated file once per wave, the wave's refresh is done (see *Stage — Refresh PR*).
 2. If the config says `CI: none`, skip this step: no workflow checks the merged wave, and the report below says so. Otherwise, read CI for `main`'s current commit once: run `git fetch origin`, then `gh run list --branch main --commit $(git rev-parse origin/main)`. Pin the query to that commit; an older green run on `main` proves nothing about the merged wave. Each PR's CI ran against an older `main`, so the merged result hasn't been checked yet.
-   - If there's no run for that commit yet, or it's still running, say so and end the run.
+   - If there's no run for that commit yet, or it's still running, say so and end the run. If a gating job in it is still `queued`, first handle it as *A queued gating job* under *Step 1 — Read the state* says, with this run's `startedAt`.
    - If it failed, don't close anything. Show the user the failure and sort it out with them:
      - **Flaky or not the wave's doing** (infrastructure, a timeout, another PR): re-run the whole run with their OK (`gh run rerun <run-id>`, not `--failed`, for the reason *Stage — Triage*'s **Re-run** gives), and check again on the next run.
      - **Caused by the wave**, such as two merged beads that only break together: create a repair bead under the sub-epic (`bd create --parent <sub-epic> --no-inherit-labels`, with `agent:`, `effort:` and `code-change` labels). Add a `Finding [CI, main]` comment describing the failure, and a `Files:` comment listing the files the repair needs. Their beads' PRs have merged, so no open PR owns them.
@@ -427,8 +427,8 @@ gh api repos/{owner}/{repo}/issues/<n>/reactions --jq '.[] | select(.user.login 
 # Does a bead branch contain a prerequisite's merge commit? (exit status 0 means yes; fetch first)
 git merge-base --is-ancestor <merge sha> origin/<bead-branch>
 
-# Read CI once (never --watch)
-gh pr checks <n>
+# Read CI once (never --watch). state tells QUEUED from IN_PROGRESS, which the plain output lumps together as pending
+gh pr checks <n> --json name,state,bucket,link
 
 # Copy one bead's files from the wave branch onto its bead branch
 git switch <bead-branch> && git checkout <wave-branch> -- <file> <file>   # git rm any the bead deleted
