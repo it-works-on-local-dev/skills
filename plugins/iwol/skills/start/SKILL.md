@@ -27,7 +27,7 @@ The worktree is `.claude/worktrees/<prefix>-<description>`. State the branch and
 
 Run `git fetch origin`, then check in this order:
 
-1. **The branch is checked out in a worktree, or it exists here (`git branch --list <branch>`) and its worktree is there on another branch** (`git worktree list --porcelain`): the user is resuming. Enter it as `worktrees.md` *Entering one* says, which stops if the folder isn't under `.claude/worktrees/` and switches a worktree left on another branch back when nothing would be lost. Skip Step 3, then name the session (Step 4) and report what's there: `git status --short` and `git log --oneline origin/main..HEAD`.
+1. **The branch is checked out in a worktree, or it exists here (`git branch --list <branch>`) and its worktree is there on another branch** (`git worktree list --porcelain`): the user is resuming. Enter it as `worktrees.md` *Entering one* says, which stops if the folder isn't under `.claude/worktrees/` and switches a worktree left on another branch back when nothing would be lost. Skip Step 3 and report what's there (Step 4): `git status --short` and `git log --oneline origin/main..HEAD`.
 2. **`.claude/worktrees/<prefix>-<description>` exists** but isn't a worktree in `git worktree list`, or is a worktree on another branch while `<prefix>/<description>` doesn't exist here: the name is taken. Stop, say what's there (for a worktree, the branch it holds), and offer to enter that worktree as it is or to choose another name.
 3. **A PR, open or closed, already used the branch name** (`gh pr list --head <branch> --state all --json number,state,url`): `/iwol:create-pr` opens a PR from the session's branch only when no PR has used its name, so it would branch afresh and the names wouldn't match. Add a word that tells the two apart, say the new names, and check them again from 1.
 4. **The branch exists, here or on `origin`, but isn't checked out anywhere** (`git branch --list <branch>`, `git ls-remote --heads origin <branch>`): ask whether to pick up that branch in the new worktree or choose another name. To pick it up, check out the local branch, or for one only on `origin`, run `git branch <branch> origin/<branch>` first.
@@ -38,11 +38,7 @@ Run `git fetch origin`, then check in this order:
 2. Note where the session is now: in a linked worktree when the two absolute paths `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints differ, otherwise in the main checkout.
 3. Create the worktree as `worktrees.md` *Creating one* says, with `-b <prefix>/<description> origin/main` (or the existing branch from Step 2), then enter it and prepare it as the config's `Worktree setup:` line says. Run the setup after entering, so its commands run in the worktree. If setup fails, report the error and stop; the worktree stays for the user to fix or remove.
 
-## Step 4 — Name the session
-
-Name the session `<prefix>/<description>`, the branch name, so the sidebar matches the branch, the worktree and later the PR. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them.
-
-## Step 5 — Report
+## Step 4 — Report
 
 - The worktree's path and branch, and that this session now works there: its commands, file edits and sub-agents all run in the worktree, and the main checkout is untouched.
 - What setup ran, or that the config needs none.
@@ -53,6 +49,7 @@ Name the session `<prefix>/<description>`, the branch name, so the sidebar match
 ## Non-goals
 
 - Don't rename, move or remove the desktop app's own worktree for this session, and don't switch the main checkout's branch or change its files.
+- Don't rename the session. It keeps the title the app generated, which describes the work; the branch and the worktree are in the report.
 - Don't create the worktree with `EnterWorktree`'s `name`; `worktrees.md` says why.
 - Don't commit, push or open a PR. That's `/iwol:create-pr`.
 - Don't start a Beads wave here. `/iwol:beads-implement` makes the wave's worktree.
