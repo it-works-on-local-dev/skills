@@ -206,12 +206,15 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
 
    Each output line gives a workflow run id and the artifact name; download each one you need into its own new directory with the second command.
 
-   **Round limit.** From the PR's 4th summary on (counted as step 7 says), stop here once each finding is evaluated: summarize each round (findings, resolutions, what's still open), and ask the user, for each finding, with your call on it, to **proceed** (fix it, as steps 3–5 say, even where your call was to decline it; once the fix is pushed, step 7 requests one more review), **defer** (reply that it's left for a follow-up and why, resolve it `WONT_FIX`, and list it as a follow-up for the user), or **decline** (reply why, and resolve it as step 5 says). Fix, reply to or resolve none of them until they answer.
+   **Round limit.** From the PR's 4th summary on (counted as step 7 says), stop here once each finding is evaluated: summarize each round (findings, resolutions, what's still open), and ask the user, for each finding, with your call on it, to **proceed** (fix it, as steps 3–5 say, even where your call was to decline it; once the fix is pushed, step 7 requests one more review), **defer** (reply `Deferred to <where>: <why>` as step 4 says, resolve it `WONT_FIX`, and list it as a follow-up for the user), or **decline** (reply `Not changing this: <reason>`, and resolve it as step 5 says). Fix, reply to or resolve none of them until they answer.
 
 3. **Fix the findings you agree with** in the working tree, then wait for the go-ahead to push ([Changes to an already-open PR](#changes-to-an-already-open-pr)).
-4. **Reply to every finding in its own thread**, after its fix is pushed, never before. Never combine findings into one PR comment, and never leave one unanswered.
-   - **Fixed:** "Fixed in <commit>: <what changed and why>".
-   - **Declined:** explain why ("Already handled by X", "Not applicable because Y", "Keeping the convention in <the file the config's `Review rules:` line names>").
+4. **Reply to every finding in its own thread**, after its fix is pushed, never before. Never combine findings into one PR comment, and never leave one unanswered. The reply states the finding's outcome in one of three forms, the ones `/iwol:beads-pr` uses too (*Every thread gets a reply and a resolution* in `../beads-pr/SKILL.md`):
+   - **Fixed:** `Fixed in <sha>: <what changed and why>`.
+   - **Deferred** (only at step 2's round limit): `Deferred to <where>: <why it's left for later>`, where `<where>` names the follow-up: an issue or a PR when there is one, otherwise "a follow-up".
+   - **Declined:** `Not changing this: <reason>`, such as "already handled by X", "not applicable because Y", or "keeping the convention in <the file the config's `Review rules:` line names>".
+
+   End every reply, and the PR comment that answers a finding with no inline comment (step 1), with the footer `_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_` on a line of its own. Replies are posted from the user's own account, so the footer is how a later `/iwol:beads-pr` run and the desktop app's Auto-fix tell an outcome reply from other comments.
 
    ```
    gh api repos/{owner}/{repo}/pulls/<PR>/comments/<comment-id>/replies -F body=@reply.md
@@ -244,9 +247,9 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
    }' -f threadId=<thread-id> -f reason=<REASON>
    ```
 
-   - `ADDRESSED`: you fixed it. Never use this reason when nothing changed.
-   - `WONT_FIX`: a valid point you're deliberately not acting on (out of scope, an accepted trade-off).
-   - `INVALID` (shown as "Not an Issue"): it doesn't apply, or it's already handled.
+   - `ADDRESSED`: you fixed it (a `Fixed in` reply). Never use this reason when nothing changed.
+   - `WONT_FIX`: a valid point you're deliberately not acting on (out of scope, an accepted trade-off): a `Deferred to` reply, or a `Not changing this` reply to a valid point.
+   - `INVALID` (shown as "Not an Issue"): it doesn't apply, or it's already handled (a `Not changing this` reply).
 
 6. **All findings declined, nothing pushed?** Once the user agrees with those calls, reply and resolve right away, then **end the loop without a re-review**. The reviewer would re-review the same commit and most likely repeat itself, and a clean pass on unchanged code proves nothing. Merging needs the user's explicit confirmation. A round with at least one pushed fix goes on to step 7.
 7. **Request a re-review** once every thread is resolved and the fix is pushed and CI is green for the new head. The CI wait ([CI check](#ci-check)) tells you when; request it then, without asking the user. **Check the stop limits first.** Stop and hand back to the user, with no re-review, if either applies:
