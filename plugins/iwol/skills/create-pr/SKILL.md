@@ -217,12 +217,12 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
    End every reply, and the PR comment that answers a finding with no inline comment (step 1), with the footer `_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_` on a line of its own. Replies are posted from the user's own account, so the footer is how a later `/iwol:beads-pr` run and the desktop app's Auto-fix tell an outcome reply from other comments.
 
    ```
-   gh api repos/{owner}/{repo}/pulls/<PR>/comments/<comment-id>/replies -F body=@reply.md
+   gh api repos/{owner}/{repo}/pulls/<PR>/comments/<comment-id>/replies -F body=@<file>
    ```
 
    - The `<PR>` number is required. `pulls/comments/<id>/replies` doesn't exist and returns a bare 404, even for a valid id.
    - The route is POST-only, so a plain `gh api` GET also returns 404. To check that a comment exists, use `pulls/<PR>/comments`.
-   - Write the body to a file (`-F body=@file`); `-f body="..."` breaks on newlines, backticks, and code fences.
+   - Write the body to a file (`-F body=@<file>`); `-f body="..."` breaks on newlines, backticks, and code fences. Put the file outside the working tree, such as one `mktemp` makes: one left in it shows up as a change, and stops [Merging](#merging)'s clean-up from removing a worktree.
 
 5. **Resolve every thread with a reason that matches your reply:**
 

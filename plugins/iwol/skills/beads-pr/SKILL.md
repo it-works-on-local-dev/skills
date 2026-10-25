@@ -391,8 +391,9 @@ The repair bead then goes through the **Fix round** and **Open the PRs** like an
 gh api graphql -F owner='{owner}' -F name='{repo}' -F n=<n> -f query='query($owner:String!,$name:String!,$n:Int!) { repository(owner:$owner, name:$name) { pullRequest(number:$n) { headRefOid mergeable reviewThreads(first:100) { nodes { id isResolved path line comments(first:20) { nodes { databaseId author { login } body createdAt } } } } } } }'
 
 # Reply to a thread (use the first comment's databaseId), then resolve it with the reason that matches the reply
-# (ADDRESSED, WONT_FIX or INVALID; see *Every thread gets a reply and a resolution*). Write the body to a file
-# (-F body=@<file>): -f body="..." breaks on newlines, backticks, and code fences
+# (ADDRESSED, WONT_FIX or INVALID; see *Every thread gets a reply and a resolution*). Write the body to a file outside
+# the worktree, such as one mktemp makes, and pass it as -F body=@<file>: -f body="..." breaks on newlines, backticks,
+# and code fences, and a file left in the worktree shows up as a change no bead lists and stops *Stage — Clean up* from removing it
 gh api -X POST repos/{owner}/{repo}/pulls/<n>/comments/<comment id>/replies -F body=@<file>
 gh api graphql -f query='mutation($id:ID!,$reason:PullRequestReviewThreadResolutionReason!) { resolveReviewThread(input:{threadId:$id,resolutionReason:$reason}) { thread { isResolved } } }' -f id=<thread id> -f reason=<reason>
 
