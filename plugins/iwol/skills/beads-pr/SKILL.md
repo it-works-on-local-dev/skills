@@ -118,7 +118,7 @@ For each item, check it against the actual code and against the review rules the
 - **Decline** — not valid, or a deliberate choice (for example, something the review rules say is intentional). Give the reason. This applies to review threads only: a failing check blocks the merge until it passes.
 - **Re-run** — a failing check caused by flaky infrastructure, a timeout or a cancellation, not by the code. With the user's OK, re-run its failed jobs (`gh run rerun <run-id> --failed`). If it fails the same way again, treat it as a Fix. A failed review check from a reviewer that *Review requests* covers isn't one: see *A failed review or the reviewer's usage limit* there.
 
-**Repeats.** A thread that repeats a finding already decided on the same PR, where the code shows nothing new, goes in the list as a repeat, with a link to the earlier decision (its outcome reply) and that decision's bucket. Once the user agrees, it gets the same outcome: reply as the earlier decision did, linking it, and resolve the thread with the same reason (see *Every thread gets a reply and a resolution*), as the *New findings* bullet under `/iwol:create-pr`'s *Claude review loop* does. The user can still move it to another bucket.
+**Repeats.** A thread that repeats a finding already decided on the same PR, where the code shows nothing new, goes in the list as a repeat, with a link to the earlier decision (its outcome reply) and that decision's bucket. Once the user agrees, reply with a link to the earlier decision and resolve the thread, as the *New findings* bullet under `/iwol:create-pr`'s *Claude review loop* does (see *Every thread gets a reply and a resolution*). A repeat of a Deferred or Declined decision gets that decision's reply and reason. A repeat of a Fixed decision gets `Not changing this: already fixed in <sha> (<link>)`, resolved `INVALID`, since nothing changed for it. The user can still move it to another bucket.
 
 **Round budget.** From a PR's third reviewer summary on (two fix rounds already, counted the way the config's `Counting review rounds:` line says), recommend this split:
 
@@ -225,11 +225,11 @@ A bead PR needs a sync when GitHub reports it conflicts with `main`, or when ano
 
 A PR is ready when all of these hold:
 
-- **The reviewer is clean on its head.** Its latest summary names the PR's `headRefOid` in the marker line the config's `Clean:` line describes (for the shared Claude review workflow, `Reviewed head: <full sha>`), and one of two things holds:
-  - That summary is the config's clean signal.
-  - Or, only if the config says resolved findings count as clean: that summary doesn't request changes, and every thread it raised has an outcome reply and is resolved. This happens when triage deferred or declined everything, so nothing was pushed.
+- **The reviewer is clean on its head.** Its latest review covers the head: its summary names the PR's `headRefOid` in the marker line the config's `Clean:` line describes (for the shared Claude review workflow, `Reviewed head: <full sha>`), or, for a reviewer whose `Clean:` line describes no such marker, the review's `commit_id` is `headRefOid` or its clean signal came after the head commit. And one of two things holds:
+  - That review is the config's clean signal.
+  - Or, only if the config says resolved findings count as clean: that review doesn't request changes, and every thread it raised has an outcome reply and is resolved. This happens when triage deferred or declined everything, so nothing was pushed.
 
-  A summary that names an older head ends that round but doesn't cover the new head; *Catch missed requests* under *Review requests* requests a review. A summary that says the review was partial isn't clean under either condition, even with no findings (see *A partial review* under *Review requests*). A review still in progress isn't clean yet. If the config says "Reviewer: none", skip this condition.
+  A review that covers an older head ends that round but doesn't cover the new head; *Catch missed requests* under *Review requests* requests a review. A review that says it was partial isn't clean under either condition, even with no findings (see *A partial review* under *Review requests*). A review still in progress isn't clean yet. If the config says "Reviewer: none", skip this condition.
 - Every CI check on the head commit passed.
 - Every review thread on the PR has an outcome reply and is resolved, every item of feedback outside threads has been answered, and its bead has no open findings and is closed.
 - It doesn't conflict with `main`.
