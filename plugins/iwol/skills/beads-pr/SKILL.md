@@ -9,7 +9,7 @@ Take one tested wave from the local wave branch to merged pull requests, then cl
 
 Each run moves the wave's PRs forward and then ends. You run it again for the next step — ideally in a new session. Every run rebuilds its picture from git, GitHub and `bd`, so it never needs an earlier session's conversation. That's the point: a review round should start from a small context, not from the 300k–600k tokens an implementation or testing session ends with.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone, the PR reviewer and how it signals, and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. Its Git and GitHub section says how PRs merge (`Merge method: merge` or `Merge method: squash`) and how they're titled (`PR title format: free` or `PR title format: conventional commit`). If either line is missing, as in a config written before they existed, stop and ask the user to run `/iwol:setup` to add it. Don't assume a method or a format. Below, "the reviewer" means the review bot the config names. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone, the PR reviewer and how it signals, CI, and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. Its CI section names the workflow and its gating jobs, where they run (`Runs on:`, `hosted` or `self-hosted:` with how to tell a queued job is waiting for one of the repository's own runners) and where recovering a stuck run is documented (`Recovering a stuck run:`), or says `CI: none` when no workflow runs on PRs. Under `CI: none` there's no CI to read or wait for: Step 1 reads none, *Stage — Triage* collects no failing checks, *Stage — Merge*'s CI condition doesn't apply, and *Stage — Close the wave* skips its CI read and says so in its report. Its Git and GitHub section says how PRs merge (`Merge method: merge` or `Merge method: squash`) and how they're titled (`PR title format: free` or `PR title format: conventional commit`). If either line is missing, as in a config written before they existed, stop and ask the user to run `/iwol:setup` to add it. Don't assume a method or a format. Below, "the reviewer" means the review bot the config names. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
 
 Two rules define the role. First, **you write no implementation code and dispatch no sub-agents.** Fixes go through beads-implement's fix mode. Your job is committing, splitting, pushing, triage, replies, review requests, merging and closing. Second, **nothing merges without the user's explicit yes in the current run.**
 
@@ -68,7 +68,7 @@ Gather everything fresh:
 
   For each open PR, the refresh PR included, gather:
   - its state, head commit, and whether it conflicts with `main` (GraphQL `mergeable`). `UNKNOWN` means GitHub is still working it out, so read it once more before relying on it;
-  - CI on the head, read once;
+  - CI on the head, read once with `gh pr checks <n> --json name,state,bucket,link` (nothing to read under `CI: none`). Its `state` tells a `QUEUED` job from an `IN_PROGRESS` one, which the plain output lumps together as pending. A gating job still `QUEUED` is handled as *A queued gating job* below says;
   - its review threads;
   - the reviewer's reviews and signals (see the config), plus any review of its that didn't finish (a failure reply, a failed review check, or a request's own run the config's `Usage limit:` line counts as failed) or message from it saying its usage limit is reached (see *A failed review or the reviewer's usage limit* under *Review requests*);
   - its latest review request, if no summary has come since: whether it shows in progress the way the config's `In progress:` line says (for the shared Claude review workflow, a 👀 on the request comment), its age (the comment's `created_at` against now), and any request-failure reply after it (see *A request that goes nowhere* under *Review requests*);
@@ -99,7 +99,15 @@ Items 6–9 cover an open refresh PR too, with the differences *Stage — Refres
 
 **Blocked beads:** if a child bead is `blocked`, report it with its comment, and any changes set aside for it (`git stash list`). Its work failed checks, so it gets no PR until the user resolves it, and the wave can't close until then. Carry on with the other beads.
 
-End with one line per PR: its number, its bead (or "refresh"), and where it stands, for example "waiting on review", "requested, not picked up yet", "CI running", "reviewer usage limit", "waiting for <bead-id> to merge", "ready to merge" or "merged".
+**A queued gating job:** when one of the config's gating jobs on a PR's head, or on `main` in *Stage — Close the wave*, is still `queued`, read its run once: on a PR, the check's `link` names the run (`…/actions/runs/<run-id>/job/…`), and on `main`, *Close the wave*'s `gh run list` does. `gh run view <run-id> --json startedAt,jobs --jq '.startedAt, (.jobs[] | "\(.name): \(.status)")'` gives when it started and its jobs. `startedAt` is the latest attempt's start, so a re-run starts the clock again.
+
+- **Under `hosted`, or a run that started 10 minutes ago or less:** the job is only waiting. Report it as "CI queued" and don't wait for it; the next run reads it again.
+- **Under `self-hosted`, and a run that started more than 10 minutes ago:** the job may be waiting for one of the repository's own runners that isn't coming. Run the diagnosis in `../create-pr/queued-ci.md` once, taking its steps for a skill that reads once, with the config's `Runs on:` line for how to tell and its `Recovering a stuck run:` line for where recovering one is documented:
+  - **A matching runner is online:** report "CI queued behind other work" and don't wait for it.
+  - **Every matching runner listed is `offline`, and every listing ran:** with the user's OK, recover the run as *Recovering the run* there says: cancel it, then re-run all its jobs. The next run reads the re-run.
+  - **A listing errors, or no matching runner is listed at all:** ask the user whether the runner's machine is up. If it is, report the job as queued and don't wait for it; if not, recover the run with their OK, as above.
+
+End with one line per PR: its number, its bead (or "refresh"), and where it stands, for example "waiting on review", "requested, not picked up yet", "CI running", "CI queued", "CI queued behind other work", "reviewer usage limit", "waiting for <bead-id> to merge", "ready to merge" or "merged".
 
 **Do not wait, poll, sleep or schedule a wake-up** for the reviewer or CI. Report what's pending and tell the user to run `/iwol:beads-pr <id>` again, in a new session, once it has landed.
 
@@ -108,7 +116,7 @@ End with one line per PR: its number, its bead (or "refresh"), and where it stan
 Collect, across all the wave's open PRs:
 - every review thread (the reviewer's or a person's) that is unresolved or has no outcome reply yet (see *Every thread gets a reply and a resolution*);
 - feedback outside threads that has no outcome reply yet: review bodies and PR conversation comments that raise a problem or ask for a change. That includes a reviewer review body carrying a finding, not just its standard header. Leave out review requests, your own footer-signed comments, and bot notices that ask for nothing;
-- every failing CI check on a PR's head, with the failing part of its log. Leave out a check that a `Waits for` comment on the PR's bead covers while the PR of the bead it names hasn't merged.
+- every failing CI check on a PR's head, with the failing part of its log (none under `CI: none`). Leave out a check that a `Waits for` comment on the PR's bead covers while the PR of the bead it names hasn't merged.
 
 For each item, check it against the actual code and against the review rules the config names. Note the reviewer's priority label, if it gives one. Also note whether the problem existed before the fixes or was introduced by one; the review rules may ask the reviewer to say which on re-reviews. The bead an item belongs to is the bead whose PR it's on; an item on the refresh PR belongs to no bead, and *Stage — Refresh PR* says how to sort it. Look across the PRs too: the same symptom on several of them, or a cause an item names in a file outside its bead's files, may be one shared cause (see *Shared causes*). Sort each item:
 
@@ -116,7 +124,7 @@ For each item, check it against the actual code and against the review rules the
 - **Repair** — valid, but its cause is in shared code no bead owns (see *Shared causes*), so a fix in this bead's files could only work around it. Group it with the other items and open findings that share the cause, and offer one repair bead for the group.
 - **Defer** — valid, but it belongs to a later bead. Name that bead. A failing check can't go to a later bead: it blocks this PR's merge until it passes, and the later wave can't start until this one closes.
 - **Decline** — not valid, or a deliberate choice (for example, something the review rules say is intentional). Give the reason. This applies to review threads only: a failing check blocks the merge until it passes.
-- **Re-run** — a failing check caused by flaky infrastructure, a timeout or a cancellation, not by the code. With the user's OK, re-run its failed jobs (`gh run rerun <run-id> --failed`). If it fails the same way again, treat it as a Fix. A failed review check from a reviewer that *Review requests* covers isn't one: see *A failed review or the reviewer's usage limit* there.
+- **Re-run** — a failing check caused by flaky infrastructure, a timeout or a cancellation, not by the code. With the user's OK, re-run the whole run (`gh run rerun <run-id>`, not `--failed`): `--failed` keeps the runner a picker job chose the first time, so a run that failed because that runner went offline would wait for it again, while re-running all jobs lets the picker pick again. If it fails the same way again, treat it as a Fix. A failed review check from a reviewer that *Review requests* covers isn't one: see *A failed review or the reviewer's usage limit* there.
 
 **Repeats.** A thread that repeats a finding already decided on the same PR, where the code shows nothing new, goes in the list as a repeat, with a link to the earlier decision (its outcome reply) and that decision's bucket. Once the user agrees, reply with a link to the earlier decision and resolve the thread, as the *New findings* bullet under `/iwol:create-pr`'s *Claude review loop* does (see *Every thread gets a reply and a resolution*). A repeat of a Deferred or Declined decision gets that decision's reply and reason. A repeat of a Fixed decision gets `Not changing this: already fixed in <sha> (<link>)`, resolved `INVALID`, since nothing changed for it. The user can still move it to another bucket.
 
@@ -137,7 +145,7 @@ Then act on it:
 - **Repair** items: create the repair bead and defer the items to it, replying on each thread and resolving it, as in *Shared causes*. The repair bead goes into the **Fix round** in this same run.
 - **Defer** items: add a comment on the later bead starting `Deferred from PR #<n> review:`, written so it stands alone (what to change, why, the thread URL). With the user's OK, you can instead create a follow-up bead in a later open wave. Use `bd create --parent <that sub-epic> --no-inherit-labels` with `agent:`, `effort:` and kind labels, and check that it shares no files with that wave's beads. Then reply on the thread and resolve it.
 - **Decline** items: reply on the thread and resolve it.
-- **Re-run** items: re-run the failed jobs, and check the result on the next run.
+- **Re-run** items: re-run each one's whole run, and check the result on the next run.
 
 If triage leaves nothing to fix on a PR, nothing is pushed there and no new review is requested. Once every thread on it has its reply and is resolved, that PR can go to **Merge** on the reviewer's existing review. The exception is a partial review: once its threads are answered, request another review even though nothing was pushed (see *A partial review* under *Review requests*).
 
@@ -230,7 +238,7 @@ A PR is ready when all of these hold:
   - Or, only if the config says resolved findings count as clean: that review doesn't request changes, and every thread it raised has an outcome reply and is resolved. This happens when triage deferred or declined everything, so nothing was pushed.
 
   A review that covers an older head ends that round but doesn't cover the new head; *Catch missed requests* under *Review requests* requests a review. A review that says it was partial isn't clean under either condition, even with no findings (see *A partial review* under *Review requests*). A review still in progress isn't clean yet. If the config says "Reviewer: none", skip this condition.
-- Every CI check on the head commit passed.
+- Every CI check on the head commit passed. If the config says `CI: none`, skip this condition.
 - Every review thread on the PR has an outcome reply and is resolved, every item of feedback outside threads has been answered, and its bead has no open findings and is closed.
 - It doesn't conflict with `main`.
 - Its branch has every change the wave branch has to the bead's own files (the check in Step 1, item 5).
@@ -285,16 +293,18 @@ The sub-epic records it: `Refresh PR #<n>` when it opens, and `Refresh merged in
 ## Stage — Close the wave
 
 1. Confirm that every child bead is closed, every bead with files has a merged PR, and, when the config ships a generated file once per wave, the wave's refresh is done (see *Stage — Refresh PR*).
-2. Read CI for `main`'s current commit once: run `git fetch origin`, then `gh run list --branch main --commit $(git rev-parse origin/main)`. Pin the query to that commit; an older green run on `main` proves nothing about the merged wave. Each PR's CI ran against an older `main`, so the merged result hasn't been checked yet.
-   - If there's no run for that commit yet, or it's still running, say so and end the run.
-   - If it failed, don't close anything. Show the user the failure and sort it out with them:
-     - **Flaky or not the wave's doing** (infrastructure, a timeout, another PR): re-run the failed jobs with their OK (`gh run rerun <run-id> --failed`), and check again on the next run.
+2. If the config says `CI: none`, skip this step: no workflow checks the merged wave, and the report below says so. Otherwise, read CI for `main`'s current commit once: run `git fetch origin`, then `gh run list --workflow <workflow file> --branch main --commit $(git rev-parse origin/main) --json databaseId,status,conclusion`, with the CI section's workflow file, so no other workflow's run on that commit, such as a release run or a review run for another PR, stands in for CI. Pin the query to that commit; an older green run on `main` proves nothing about the merged wave. Each PR's CI ran against an older `main`, so the merged result hasn't been checked yet.
+   - **No run for that commit:** if the commit landed on `main` 10 minutes ago or less (`git log -1 --format=%cI origin/main`), CI may not have started yet: say so and end the run. Older than that, no run is coming for it, for example because the workflow doesn't run on pushes to `main`, or skipped this commit through a `paths` filter or `[skip ci]`, as it may for a docs-only commit that landed after the wave. Look for an earlier run that covers the wave instead: list the workflow's runs on `main` (`gh run list --workflow <workflow file> --branch main --limit 50 --json databaseId,headSha,status,conclusion`) and take the newest whose `headSha` contains every bead's `Merged in PR` commit and, when there is one, the sub-epic's latest `Refresh merged in PR` commit (`git merge-base --is-ancestor <merge sha> <headSha>` for each). Handle that run as the bullets below say. Only when no such run exists, tell the user, and with their OK skip this step as under `CI: none`, with the same line in the report below; without it, end the run.
+   - **Still running:** say so and end the run. A run shows `in_progress` once any of its jobs has started, such as a picker job, even while a gating job waits for a runner, so for a run still running, first read its jobs once (`gh run view <run-id> --json startedAt,jobs`, with the list's `databaseId`). A gating job still `queued` there is handled as *A queued gating job* under *Step 1 — Read the state* says, with this run's `startedAt`.
+   - **Completed with any conclusion but `success`** (`failure`, `cancelled`, `timed_out`, `startup_failure` and the like): don't close anything. Show the user the failure and sort it out with them:
+     - **Flaky or not the wave's doing** (infrastructure, a timeout, a cancellation, such as a recovery whose re-run GitHub refused while the cancellation was still finishing, another PR): re-run the whole run with their OK (`gh run rerun <run-id>`, not `--failed`, for the reason *Stage — Triage*'s **Re-run** gives), and check again on the next run.
      - **Caused by the wave**, such as two merged beads that only break together: create a repair bead under the sub-epic (`bd create --parent <sub-epic> --no-inherit-labels`, with `agent:`, `effort:` and `code-change` labels). Add a `Finding [CI, main]` comment describing the failure, and a `Files:` comment listing the files the repair needs. Their beads' PRs have merged, so no open PR owns them.
      - Then do a **Fix round** for the repair bead and **Open the PRs** for it. The wave closes once its PR merges, any refresh it then needs has merged (see *Stage — Refresh PR*), and `main` is green.
 3. Do **Clean up**. If it stops, end the run without closing the sub-epic. The next run comes back here and the clean-up picks up where it stopped.
 4. Close the sub-epic: `bd close <sub-epic> --reason "All bead PRs merged: #<n>, #<n>, …. <one line on verification and manual testing>"`, naming any refresh PRs after the bead PRs (`refresh #<n>`).
 5. Report briefly:
    - The wave is done, with the PR links.
+   - Under `CI: none`, or when the user agreed to skip the CI read because no run came for `main`'s commit, that no CI checked the merged wave, so nothing has run the beads together on `main`.
    - What the clean-up removed, and anything it left for the user to decide.
    - The findings deferred to later beads, one line each.
    - The next step: `/iwol:beads-implement <next sub-epic id>` in a new session.
@@ -418,8 +428,8 @@ gh api repos/{owner}/{repo}/issues/<n>/reactions --jq '.[] | select(.user.login 
 # Does a bead branch contain a prerequisite's merge commit? (exit status 0 means yes; fetch first)
 git merge-base --is-ancestor <merge sha> origin/<bead-branch>
 
-# Read CI once (never --watch)
-gh pr checks <n>
+# Read CI once (never --watch). state tells QUEUED from IN_PROGRESS, which the plain output lumps together as pending
+gh pr checks <n> --json name,state,bucket,link
 
 # Copy one bead's files from the wave branch onto its bead branch
 git switch <bead-branch> && git checkout <wave-branch> -- <file> <file>   # git rm any the bead deleted
