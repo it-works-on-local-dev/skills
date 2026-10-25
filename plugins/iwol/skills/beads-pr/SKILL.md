@@ -140,13 +140,13 @@ If triage leaves nothing to fix on a PR, nothing is pushed there and no new revi
 
 ### Every thread gets a reply and a resolution
 
-Each review thread on a PR ends with one reply from you that states its outcome, followed by resolving the thread. No exceptions: never resolve a thread without a reply, and never leave a replied-to thread unresolved.
+Each review thread on a PR ends with one reply from you that states its outcome, followed by resolving the thread with the reason that matches it, the convention `/iwol:create-pr` uses too (its *Claude review loop*). No exceptions: never resolve a thread without a reply, and never leave a replied-to thread unresolved.
 
-- **Fixed:** `Fixed in <sha>: <what changed>`. Post it only after the fix is pushed to that PR. A fix that failed verification gets no reply yet, and its thread stays open.
-- **Deferred:** `Deferred to <bead-id>: <why it belongs there>`. Post it as soon as the user agrees to the triage, or to deferring the finding the thread became (see *Finding comments*).
-- **Declined:** `Not changing this: <reason>`, citing the owner's decision or the review rule where one applies. Post it as soon as the user agrees to the triage, or to declining the finding the thread became.
+- **Fixed:** `Fixed in <sha>: <what changed>`, resolved `ADDRESSED`. Post it only after the fix is pushed to that PR. A fix that failed verification gets no reply yet, and its thread stays open.
+- **Deferred:** `Deferred to <bead-id>: <why it belongs there>`, resolved `WONT_FIX`. Post it as soon as the user agrees to the triage, or to deferring the finding the thread became (see *Finding comments*).
+- **Declined:** `Not changing this: <reason>`, citing the owner's decision or the review rule where one applies. Resolve it `WONT_FIX` when it's a valid point deliberately not acted on, such as a choice the review rules say is intentional, and `INVALID` (shown as "Not an Issue") when it doesn't apply or is already handled. Post it as soon as the user agrees to the triage, or to declining the finding the thread became.
 
-End every reply with the footer `_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_`. That footer is how a later run tells an outcome reply apart from other comments, because replies are posted from the user's own account. If a thread was resolved by hand without a reply, it still gets one: ask the user the outcome if it isn't clear.
+Never resolve a thread `ADDRESSED` when nothing changed. End every reply with the footer `_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_`. That footer is how a later run, and the desktop app's Auto-fix, tell an outcome reply apart from other comments, because replies are posted from the user's own account. If a thread was resolved by hand without a reply, it still gets one: ask the user the outcome if it isn't clear.
 
 Feedback outside threads can't be resolved, so it gets one PR comment instead: link each item and state its outcome in the same words (Fixed, Deferred, Declined), ending with the footer. An item counts as answered once a later footer-signed comment links to it.
 
@@ -250,10 +250,10 @@ On a yes, merge them one at a time:
     ```bash
     SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
       [ -n "$SUBJECT" ] &&
-      gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT"
+      gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT" --body ""
     ```
 
-    Setting the subject keeps the squash commit's subject the PR's title: for a one-commit PR, GitHub would otherwise take that commit's subject. Add `--delete-branch` only if the config says the skill deletes branches, not if it says GitHub deletes them on merge. gh's `--delete-branch` also force-deletes the local bead branch, so before passing it, check that the local branch, if it's still there, holds nothing beyond the head you checked: `git log <full sha>..<bead-branch>` prints nothing. If it prints commits, stop and show them.
+    Setting the subject keeps the squash commit's subject the PR's title: for a one-commit PR, GitHub would otherwise take that commit's subject. `--body ""` leaves its body blank: otherwise the repository's squash settings can fill the body with the PR's commit messages or its description, which then land on `main` for good. Where release-please builds the changelog, that gives it exactly one entry per PR. Add `--delete-branch` only if the config says the skill deletes branches, not if it says GitHub deletes them on merge. gh's `--delete-branch` also force-deletes the local bead branch, so before passing it, check that the local branch, if it's still there, holds nothing beyond the head you checked: `git log <full sha>..<bead-branch>` prints nothing. If it prints commits, stop and show them.
 - Record it on the bead: `bd comments add <bead-id> "Merged in PR #<n> as <merge sha>"`. `<merge sha>` is the commit the merge made on `main`: the merge commit under `merge`, the squash commit under `squash`. Either way, `gh pr view <n> --json mergeCommit --jq .mergeCommit.oid` gives it. Record the refresh PR on the sub-epic instead: `bd comments add <sub-epic-id> "Refresh merged in PR #<n> as <merge sha>"`.
 - Never enable auto-merge. The config's `Auto-merge: never` says the same.
 
@@ -390,9 +390,12 @@ The repair bead then goes through the **Fix round** and **Open the PRs** like an
 # Review threads, with each thread's comments
 gh api graphql -F owner='{owner}' -F name='{repo}' -F n=<n> -f query='query($owner:String!,$name:String!,$n:Int!) { repository(owner:$owner, name:$name) { pullRequest(number:$n) { headRefOid mergeable reviewThreads(first:100) { nodes { id isResolved path line comments(first:20) { nodes { databaseId author { login } body createdAt } } } } } } }'
 
-# Reply to a thread (use the first comment's databaseId), then resolve it
-gh api -X POST repos/{owner}/{repo}/pulls/<n>/comments/<comment id>/replies -f body="$BODY"
-gh api graphql -f query='mutation($id:ID!) { resolveReviewThread(input:{threadId:$id}) { thread { isResolved } } }' -f id=<thread id>
+# Reply to a thread (use the first comment's databaseId), then resolve it with the reason that matches the reply
+# (ADDRESSED, WONT_FIX or INVALID; see *Every thread gets a reply and a resolution*). Write the body to a file outside
+# the worktree, such as one mktemp makes, and pass it as -F body=@<file>: -f body="..." breaks on newlines, backticks,
+# and code fences, and a file left in the worktree shows up as a change no bead lists and stops *Stage — Clean up* from removing it
+gh api -X POST repos/{owner}/{repo}/pulls/<n>/comments/<comment id>/replies -F body=@<file>
+gh api graphql -f query='mutation($id:ID!,$reason:PullRequestReviewThreadResolutionReason!) { resolveReviewThread(input:{threadId:$id,resolutionReason:$reason}) { thread { isResolved } } }' -f id=<thread id> -f reason=<reason>
 
 # The reviewer's reviews and reactions (its REST login is in the config)
 gh api repos/{owner}/{repo}/pulls/<n>/reviews --jq '.[] | select(.user.login == "<reviewer login>") | {submitted_at, commit_id, state}'
@@ -415,10 +418,11 @@ SUBJECT=$(gh pr view <n> --json title,number,headRefName --jq '<subject format a
   gh pr merge <n> --merge --match-head-commit <full sha> --subject "$SUBJECT" --body "$BODY"
 
 # Or squash, pinned to the checked head (Merge method: squash). Add --delete-branch only if the config says the skill deletes branches.
-# Run it as one chained Bash call: the title is read just before merging and never goes through the shell, and nothing merges if the read fails or the subject is empty
+# Run it as one chained Bash call: the title is read just before merging and never goes through the shell, and nothing merges if the read fails or the subject is empty.
+# --body "" keeps the body blank: otherwise the repository's squash settings can fill it with the PR's commit messages or its description, which land on main for good
 SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
   [ -n "$SUBJECT" ] &&
-  gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT"
+  gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT" --body ""
 
 # Under squash: does a bead branch hold anything beyond what merged? (must print nothing before deleting it)
 git log <headRefOid>..<bead-branch>
