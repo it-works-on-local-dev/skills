@@ -83,7 +83,7 @@ Naming rule:
 
 ### Session names
 
-In the Claude desktop app, the bead skills name their session after the bead they run on, and `/iwol:start` after its branch, so the sidebar shows what each session is doing. A CLI session can't be renamed, so it keeps its name.
+In the Claude desktop app, the bead skills name their session after the bead they run on, so the sidebar shows what each session is doing. `/iwol:start` leaves the session's title alone, so that session keeps the name the app gave it. A CLI session can't be renamed, so it keeps its name.
 
 | Skill | Session name |
 | --- | --- |
@@ -91,7 +91,6 @@ In the Claude desktop app, the bead skills name their session after the bead the
 | `/iwol:beads-implement` | `[<id>] implementation`, for the sub-epic or leaf bead it was given; a fix round runs inside a `/iwol:beads-pr` session and keeps that session's name |
 | `/iwol:beads-summary-and-test` | `[<id>] summary and test`, or `[<id>] summary and test-<group>` for one group of a split test |
 | `/iwol:beads-pr` | `[<sub-epic id>] pr-<n>` for the wave's nth run, counted by the `PR session <n>` comments each run adds to the sub-epic |
-| `/iwol:start` | `<prefix>/<description>`, the branch name |
 
 ### Worktrees
 
