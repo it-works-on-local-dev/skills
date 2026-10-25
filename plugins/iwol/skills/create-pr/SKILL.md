@@ -68,26 +68,9 @@ The loop's `sha=$(git rev-parse HEAD)` is the commit you just pushed. When mergi
 - **`failure`:** read the log (`gh run view <run-id> --log-failed`) and handle it where you are in the flow.
 - **`cancelled`:** a newer push superseded the run, if the workflow cancels in-progress runs. If the PR's head has moved, wait on the new head's run instead. If it hasn't, someone cancelled the run, so tell the user.
 - **Not finished:** the loop prints each job's status. A gating job still `in_progress` is only slow, so wait again. A gating job still `queued`:
-  - **Under `self-hosted`:** it may be waiting for one of the repository's own runners (the run itself can show `in_progress`, because other jobs, such as a job that picks a runner, already ran). Handle it as below, then wait again.
+  - **Under `self-hosted`:** it may be waiting for one of the repository's own runners (the run itself can show `in_progress`, because other jobs, such as a job that picks a runner, already ran). Diagnose it as `queued-ci.md`, next to this file, says, taking its steps for a skill that waits: it checks the job's labels against the runners that could take it, and says when to wait again, recover the run or ask the user.
   - **Under `hosted`:** it's only waiting for GitHub's hosted runners. Wait again; re-running would only queue it again. If it's still queued after a second wait, tell the user.
 - **`null null null`:** CI never started for that commit, so tell the user.
-
-**Under `self-hosted`**, a gating job still `queued` after the wait may be waiting for one of the repository's own runners; the config's `Runs on:` line says how to tell. Take the job's labels from the queued job itself, where GitHub has already resolved its `runs-on` (the workflow file may hold only an expression, such as one reading a runner-picking job's output):
-
-```
-gh api --paginate repos/{owner}/{repo}/actions/runs/<run-id>/jobs --jq '.jobs[] | select(.status == "queued") | "\(.name) \(.labels | join(","))"'
-```
-
-A runner can take the job only when it carries all of the job's labels, compared without regard to case, as GitHub does. Check the runners registered to the repository itself, and, when the repository's owner (`<owner>`, from `gh repo view --json owner --jq .owner.login`) is an organisation (`gh api repos/{owner}/{repo} --jq .owner.type` prints `Organization`), the organisation's runners too; a personal account (`User`) has no organisation runners, so check only the repository's. In each command, `<labels>` is the job's labels as a JSON array, such as `["self-hosted","linux"]`. Listing an organisation's runners needs a token that can read its self-hosted runners: an organisation admin's classic token with the `admin:org` scope (a default `gh auth login` doesn't grant it), or a fine-grained token with "Self-hosted runners: Read".
-
-```
-gh api --paginate repos/{owner}/{repo}/actions/runners --jq '.runners[] | select((<labels> | map(ascii_downcase)) - [.labels[].name | ascii_downcase] == []) | "\(.name) \(.status) busy=\(.busy)"'
-gh api --paginate orgs/<owner>/actions/runners --jq '.runners[] | select((<labels> | map(ascii_downcase)) - [.labels[].name | ascii_downcase] == []) | "\(.name) \(.status) busy=\(.busy)"'
-```
-
-- **Any matching runner `online`** in either list, even if the other listing errored: the job is queued behind other work, since a busy runner still counts as online. Wait again; re-running would only queue it again. If it's still queued after a second wait, tell the user.
-- **None `online`**, and every listing that applies ran without an error (every matching runner `offline`, or no matching runner listed on two checks a minute apart, since an ephemeral runner is briefly unregistered between jobs): the job waits until a runner is back, or until GitHub cancels it after 24 hours, so don't wait it out. Recover it per the documentation the config's `Recovering a stuck run` line points to (if it says `none`, the steps here are all there is): cancel the run, then re-run all its jobs (`gh run rerun <run-id>`, not `--failed`) so a job that picks a runner, where the repository has one, runs again and can fall back to hosted runners. If it's still stuck after that, tell the user.
-- **A listing command errors** and no other list shows a matching runner `online` (a 403 when the token can't read runners): you can't tell a busy runner from an offline one, so don't guess. Tell the user the job is queued and ask whether the runner's machine is up: if it is, wait again; if not, recover the run as above. Never suggest widening the `gh` token's scopes, since `admin:org` grants full organisation admin to read one list.
 
 Green CI is policy, not something GitHub enforces: GitHub's Free plan can't make a check required on a private repository, so nothing but this skill stops a merge past a red or missing check. Wait for CI after every push to an open PR, and never merge unless it's green for the exact head being merged. It's in addition to the targeted tests in step 6.
 
