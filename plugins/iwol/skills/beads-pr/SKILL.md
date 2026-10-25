@@ -250,10 +250,10 @@ On a yes, merge them one at a time:
     ```bash
     SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
       [ -n "$SUBJECT" ] &&
-      gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT"
+      gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT" --body ""
     ```
 
-    Setting the subject keeps the squash commit's subject the PR's title: for a one-commit PR, GitHub would otherwise take that commit's subject. Add `--delete-branch` only if the config says the skill deletes branches, not if it says GitHub deletes them on merge. gh's `--delete-branch` also force-deletes the local bead branch, so before passing it, check that the local branch, if it's still there, holds nothing beyond the head you checked: `git log <full sha>..<bead-branch>` prints nothing. If it prints commits, stop and show them.
+    Setting the subject keeps the squash commit's subject the PR's title: for a one-commit PR, GitHub would otherwise take that commit's subject. `--body ""` leaves its body blank: otherwise the repository's squash settings can fill the body with the PR's commit messages or its description, which then land on `main` for good. Where release-please builds the changelog, that gives it exactly one entry per PR. Add `--delete-branch` only if the config says the skill deletes branches, not if it says GitHub deletes them on merge. gh's `--delete-branch` also force-deletes the local bead branch, so before passing it, check that the local branch, if it's still there, holds nothing beyond the head you checked: `git log <full sha>..<bead-branch>` prints nothing. If it prints commits, stop and show them.
 - Record it on the bead: `bd comments add <bead-id> "Merged in PR #<n> as <merge sha>"`. `<merge sha>` is the commit the merge made on `main`: the merge commit under `merge`, the squash commit under `squash`. Either way, `gh pr view <n> --json mergeCommit --jq .mergeCommit.oid` gives it. Record the refresh PR on the sub-epic instead: `bd comments add <sub-epic-id> "Refresh merged in PR #<n> as <merge sha>"`.
 - Never enable auto-merge. The config's `Auto-merge: never` says the same.
 
@@ -417,10 +417,11 @@ SUBJECT=$(gh pr view <n> --json title,number,headRefName --jq '<subject format a
   gh pr merge <n> --merge --match-head-commit <full sha> --subject "$SUBJECT" --body "$BODY"
 
 # Or squash, pinned to the checked head (Merge method: squash). Add --delete-branch only if the config says the skill deletes branches.
-# Run it as one chained Bash call: the title is read just before merging and never goes through the shell, and nothing merges if the read fails or the subject is empty
+# Run it as one chained Bash call: the title is read just before merging and never goes through the shell, and nothing merges if the read fails or the subject is empty.
+# --body "" keeps the body blank: otherwise the repository's squash settings can fill it with the PR's commit messages or its description, which land on main for good
 SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
   [ -n "$SUBJECT" ] &&
-  gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT"
+  gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT" --body ""
 
 # Under squash: does a bead branch hold anything beyond what merged? (must print nothing before deleting it)
 git log <headRefOid>..<bead-branch>
