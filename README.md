@@ -68,7 +68,7 @@ Naming rule:
 
 ### Skills
 
-Model and Effort are the settings recommended for the session that runs the skill. Each is a floor: a stronger model or a higher effort is always fine. Set them with `/model` and `/effort` in the CLI, or with the model and effort pickers in the Claude desktop app. `/iwol:beads-implement`'s row is for the session that orchestrates the wave; its workers take their model and effort from each bead's labels (see [Agents](#agents)).
+Model and Effort are the settings recommended for the session that runs the skill. Each is a floor: a stronger model or a higher effort is always fine. Set them with `/model` and `/effort` in the CLI, or with the model and effort pickers in the Claude desktop app. `/iwol:start`'s row covers only the turn that creates the worktree: the session then does the work, so set the model and effort that work needs before starting on it. `/iwol:beads-implement`'s row is for the session that orchestrates the wave; its workers take their model and effort from each bead's labels (see [Agents](#agents)).
 
 | Command | What it does | Model | Effort |
 | --- | --- | --- | --- |
