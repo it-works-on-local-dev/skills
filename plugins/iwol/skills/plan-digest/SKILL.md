@@ -45,7 +45,7 @@ A one-line change that flips an invariant outranks a 500-line mechanical move �
 
 ### 3. Decisions locked in
 
-The consequential design choices made during grilling. Limit to **3–5 decisions**.
+The consequential design choices made in the plan (during grilling, if it was grilled). Limit to **3–5 decisions**.
 
 For each:
 
@@ -83,11 +83,15 @@ If the plan has no verification strategy, flag that explicitly. Do not assume a 
 
 `/iwol:grill-me` ends with two lists: the decisions reached, and the questions it routed to someone else (a stakeholder, an architect) because neither the user nor Claude could answer them. List each routed question here as an open item, naming who has to answer it. Do not invent an answer for it: grilling already said nobody in the conversation can. A routed question that affects correctness, reversibility, users, data, security or another system pushes the verdict to "inspect <that question> first".
 
-Apart from those, this section should be **empty**, because grilling should have resolved every material fork. If a fork that neither list covers genuinely remains unresolved, put this warning at the very top of the digest:
+Apart from those, this section should be **empty** for a plan `/iwol:grill-me` worked on in this session, because grilling should have resolved every material fork. If a fork that neither list covers genuinely remains unresolved, put this warning at the very top of the digest:
 
 > ⚠️ **Grilling missed this:** <question>
 
-Then give your recommended answer and why. Do not force an unresolved question into "Decisions locked in" or disguise it as a risk.
+Then give your recommended answer and why.
+
+For a plan that wasn't grilled in this session, grilling didn't run, so never say it missed anything. List the plan's unresolved forks here as open items under "The plan leaves open:", each with your recommended answer and why, and let a material one push the verdict to "inspect <that fork> first", as the routed questions do.
+
+In either case, do not force an unresolved question into "Decisions locked in" or disguise it as a risk.
 
 ## Formatting rules
 
