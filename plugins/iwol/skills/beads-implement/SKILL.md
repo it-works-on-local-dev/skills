@@ -82,10 +82,6 @@ This is a hard constraint on the tool call itself, not a suggestion to weigh.
 
 The same applies in the other direction: if a bead carries **more than one** value from the same label set (e.g. both `agent:opus` and `agent:sonnet`, or both `effort:low` and `effort:xhigh`), that is a conflicting bead, not a bead you can resolve by picking the "obviously right" one. This commonly happens when a bead was created with `bd create --parent <epic>` without `--no-inherit-labels` — the parent epic's own labels silently merge with whatever `--labels` was passed. Stop and ask the user which value to use, exactly as you would for a missing label; do not guess, and do not default to the parent epic's label on the theory that it's more authoritative.
 
-### Why only the Agent tool
-
-The skill this one came from offered a second dispatch mode, the `Workflow` tool with one `agent()` call per bead in a script, on request (`- use a workflow`). It's gone from this skill. It existed there to set each bead's effort, which the worker definitions do here, and everything after dispatch (the scope check on each diff, the once-per-wave format and refresh, central verification, re-dispatch, the shared-cause reporting) is judgement work that this session does as results land, not something a script could run ahead of it. An option nobody runs would still have to stay correct in every one of those steps. If a wave ever grows too large for its results to fit in this session's context, the thing to add back is a workflow for the dispatch step alone, returning each bead's report, with everything after it still done here.
-
 Honour the task-kind label:
 
 - `code-change` — writes files
@@ -101,6 +97,10 @@ Honour the task-kind label:
 - **Do not perform validation beyond making sure your own changes are internally consistent** — obvious syntax errors you can see at a glance, nothing more.
 - Report in observable terms: what you did, which files you created, modified, or deleted, and any manual testing instructions you propose for the orchestrator to run.
 - Leave all verification to the orchestrator.
+
+### Why only the Agent tool
+
+The skill this one came from offered a second dispatch mode, the `Workflow` tool with one `agent()` call per bead in a script, on request (`- use a workflow`). It's gone from this skill. It existed there to set each bead's effort, which the worker definitions do here, and everything after dispatch (the scope check on each diff, the once-per-wave format and refresh, central verification, re-dispatch, the shared-cause reporting) is judgement work that this session does as results land, not something a script could run ahead of it. An option nobody runs would still have to stay correct in every one of those steps. If a wave ever grows too large for its results to fit in this session's context, the thing to add back is a workflow for the dispatch step alone, returning each bead's report, with everything after it still done here.
 
 ## Step 4 — Run the wave and verify centrally
 
