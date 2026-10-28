@@ -57,7 +57,7 @@ Gap: the TUI check covers effort only. The nested session doesn't persist its tr
 - **Neither form reaches most of a run.** Most iwol skills are multi-turn (grill-me, summary-and-test, beads-pr) or long enough that you reply in the middle (setup, create-pr, create-release). Setting a value would move the first turn only, which is the cheapest part of the run.
 - **Both forms can downgrade.** The README's values are floors ("or higher"), and the frontmatter can't express a floor. Setting `effort: high` on create-pr would lower a session you'd deliberately run at `xhigh`, and setting `model: opus` on beads-pr would take a Fable session off Fable.
 - **`model:` doesn't even apply when Claude invokes the skill.** That makes it unpredictable across the plugin's own hand-offs.
-- **The only form that can't downgrade is a no-op.** `effort: xhigh` on the three `xhigh` skills (beads-decompose-plan, beads-pr, grill-me) can only lower a `max` session, but it still affects only turn 1 and never covers the turns where those skills do their judgement-heavy work. Not worth carrying.
+- **The least harmful form still only reaches turn 1.** `effort: xhigh` on the three `xhigh` skills (beads-decompose-plan, beads-pr, grill-me) can only lower a `max` session, but it still affects only turn 1 and never covers the turns where those skills do their judgement-heavy work. Not worth carrying.
 
 ## If enforcement is still wanted later
 
