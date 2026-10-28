@@ -214,7 +214,7 @@ Run this step only when Step 1's answer is the public Claude review workflow; wi
    - `/iwol:grill-me` to settle a plan's open questions, if it has any, then `/iwol:plan-digest` for the go/no-go on the plan;
    - `/iwol:beads-decompose-plan <path to plan>`, once per plan;
    - then for each wave: `/iwol:beads-implement <sub-epic id>`, `/iwol:beads-summary-and-test <sub-epic id>` in a new session, and `/iwol:beads-pr <sub-epic id>` in a new session each time until the wave closes;
-   - for work that isn't a wave: `/iwol:start <description>`, from a session started in the main checkout, to give it its own named worktree, then `/iwol:summary-and-test` to test it and `/iwol:create-pr` to ship it;
+   - for work that isn't a wave: `/iwol:start <description>`, from a session started in the main checkout, to do it in its own named worktree, then `/iwol:summary-and-test` to test it and `/iwol:create-pr` to ship it;
    - `/iwol:side-quest <bead id or prompt>` to do one small task in a worktree of its own and leave it committed on a local branch, which `/iwol:start <branch>` and `/iwol:create-pr` pick up later (name it here even though the session doesn't list it, as in Step 1);
    - any other `iwol:` skills this session offers, such as `/iwol:create-release`.
 
