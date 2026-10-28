@@ -9,8 +9,6 @@ Orchestrate one sub-epic of a bead graph. Launch its child beads across parallel
 
 Two things define this role. First, **you write no implementation code.** Your job is dispatch, sequencing, and verification. Second, **all verification is yours alone.** Sub-agents produce artifacts; they do not get to grade their own work. An agent that just wrote a change is the worst possible judge of whether it broke something, and an agent running tests in its own sandbox tells you nothing about the state of the repo after every wave lands together.
 
-Default to local work unless a bead explicitly says otherwise.
-
 This skill stops at verified, uncommitted work. Committing, the pull requests (one per bead), review rounds, merging and closing the wave belong to `/iwol:beads-pr`.
 
 Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it.
@@ -75,13 +73,18 @@ Hand each sub-agent **only its own bead's text** — its description, design, ac
 Pick the model from the bead's `agent:` label — `sonnet`, or `opus` — and set the effort from its `effort:` label. Do not substitute either. The labels encode a judgement made with full sight of the plan; overriding them from inside a single bead's context is guesswork.
 
 This is a hard constraint on the tool call itself, not a suggestion to weigh.
+- Dispatch every bead with its own `Agent` call, the whole wave in one message so the calls run concurrently. The `Agent` tool is the only dispatch mode: there's no `Workflow` mode, and `- use a workflow` on the invocation isn't something this skill does (see *Why only the Agent tool* below).
 - Dispatch every bead to the worker definition for its two labels: `subagent_type: iwol:bead-<agent>-<effort>`, such as `iwol:bead-opus-xhigh`. The definitions come from the `iwol` plugin, not from `.claude/agents/`. Those definitions set the model and the effort. The `Agent` tool takes a `model` but has no effort parameter, so a definition is the only way to set effort.
-- On every dispatch, also pass `model` set to the bead's `agent:` label. Inside a `Workflow` script, `agent()` takes both, as `model` and `opts.effort`.
+- On every dispatch, also pass `model` set to the bead's `agent:` label.
 - If the definition for a bead's label pair doesn't exist, first check that the pair is one the plugin ships: `opus` or `sonnet`, each at `low`, `medium`, `high` or `xhigh`. If it isn't (`effort:max`, `agent:haiku`, or a typo), that is a defect in the bead. Stop and flag it to the user, as for a missing label below. Only for a shipped pair with no definition, stop because the `iwol` plugin isn't loaded in this session. Ask the user to run `/reload-plugins` or start a new session; don't create a definition file.
 - Never omit the model or the effort to let the tool auto-route or inherit a default. Never round an `effort:xhigh` bead down to `high` because a model doesn't nominally support it, and never swap `opus` for `sonnet` (or vice versa) because the task looks simpler or costlier than the label implies.
 - If a bead is missing either label, that is a defect in the bead. Stop and flag it to the user rather than guessing a model or effort to fill the gap.
 
 The same applies in the other direction: if a bead carries **more than one** value from the same label set (e.g. both `agent:opus` and `agent:sonnet`, or both `effort:low` and `effort:xhigh`), that is a conflicting bead, not a bead you can resolve by picking the "obviously right" one. This commonly happens when a bead was created with `bd create --parent <epic>` without `--no-inherit-labels` — the parent epic's own labels silently merge with whatever `--labels` was passed. Stop and ask the user which value to use, exactly as you would for a missing label; do not guess, and do not default to the parent epic's label on the theory that it's more authoritative.
+
+### Why only the Agent tool
+
+The skill this one came from offered a second dispatch mode, the `Workflow` tool with one `agent()` call per bead in a script, on request (`- use a workflow`). It's gone from this skill. It existed there to set each bead's effort, which the worker definitions do here, and everything after dispatch (the scope check on each diff, the once-per-wave format and refresh, central verification, re-dispatch, the shared-cause reporting) is judgement work that this session does as results land, not something a script could run ahead of it. An option nobody runs would still have to stay correct in every one of those steps. If a wave ever grows too large for its results to fit in this session's context, the thing to add back is a workflow for the dispatch step alone, returning each bead's report, with everything after it still done here.
 
 Honour the task-kind label:
 
