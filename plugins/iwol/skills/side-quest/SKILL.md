@@ -26,11 +26,11 @@ Don't try to detect bead ids strictly. If the argument is a single token that lo
 Branch `<prefix>/<description>`, worktree `.claude/worktrees/<prefix>-<description>`, as `/iwol:start` names them, so that `/iwol:start` and `/iwol:create-pr` take the branch afterwards. Pick the prefix from the table in *Branch and commit naming* in `../create-pr/SKILL.md` by what the work is; anything that doesn't clearly fit is `chore`, so don't ask.
 
 - **A prompt:** `<description>` is the prompt shortened to a few words, dropping filler such as "the", "a" and "some", put through the `<description>` rule in `worktrees.md`.
-- **A bead:** `<description>` is `<bead-id>-<title>`, where `<title>` is the bead's title put through the same rule. Example: bead `proj-45` "Add the export button" becomes `feat/proj-45-add-the-export-button`.
+- **A bead:** `<description>` is `<bead-id> <title>`, the id and the bead's title together, put through the same rule as one string. The id goes through it too, since `/iwol:start <branch>` puts the whole description through the rule again and has to land on the same name: a dotted id such as `proj-a1b2.1.3` becomes `proj-a1b2-1-3`, and the 40-character cut applies to the id and the title together. Example: bead `proj-a1b2.1.3` "Add the export button" becomes `feat/proj-a1b2-1-3-add-the-export-button`.
 
 State the branch and the worktree in one line, so the user can correct them, but don't wait for a yes.
 
-Run `git fetch origin`, then check that the names are free: no branch `<branch>` here or on `origin` (`git branch --list <branch>`, `git ls-remote --heads origin <branch>`), no PR that has used it (`gh pr list --head <branch> --state all --json number` prints `[]`), and no folder at the worktree's path. If any is taken, add a word that tells the two apart, say the new names, and check again.
+Run `git fetch origin`, then check that the names are free: no branch `<branch>` here or on `origin` (`git branch --list <branch>`, `git ls-remote --heads origin <branch>`), no PR that has used it (`gh pr list --head <branch> --state all --json number` prints `[]`), and no folder at the worktree's path. If any is taken, add a word that tells the two apart, put the whole description through the rule again (the extra word can push it past 40 characters), say the new names, and check again.
 
 ## Step 3 — Create the worktree and move in
 

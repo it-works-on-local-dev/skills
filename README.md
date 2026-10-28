@@ -106,7 +106,7 @@ The Claude desktop app gives each session a worktree with a random name before t
 | --- | --- | --- | --- |
 | A Beads wave | `feature/<sub-epic id>-<title>` | `<sub-epic id>-<title>` | `/iwol:beads-implement` |
 | Anything else | `<prefix>/<description>`, with one of `/iwol:create-pr`'s branch prefixes (`feat`, `fix`, `hotfix`, `docs`, `refactor`, `test` or `chore`) | `<prefix>-<description>` | `/iwol:start` |
-| A side quest | `<prefix>/<description>` as above, where a bead's `<description>` is `<bead id>-<title>` | `<prefix>-<description>` | `/iwol:side-quest` |
+| A side quest | `<prefix>/<description>` as above, where a bead's `<description>` is `<bead id> <title>` put through the description rule as one string | `<prefix>-<description>` | `/iwol:side-quest` |
 
 Start the session for new work in the main checkout (in the desktop app, with the session's worktree option off), then run `/iwol:start <description>` or `/iwol:beads-implement <sub-epic id>`. The skill creates the worktree from the base branch and moves the session into it, so its commands, edits and sub-agents all run there, and the desktop app's diff and file panes follow. The main checkout's branch and files are never touched.
 
