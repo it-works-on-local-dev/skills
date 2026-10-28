@@ -4,9 +4,9 @@ Follow-up from PR 34, which added the README's `Model` and `Effort` columns as r
 
 ## Answer
 
-No form covers a whole run. `effort:` in a `SKILL.md` applies to **the turn that invokes the skill and nothing after it**; the next prompt runs on the session's effort again. `model:` reaches even less: it applies to that one turn only when you type the slash command, and **not at all when Claude invokes the skill through the Skill tool**, which is how iwol's skills hand off to each other. Where they apply, both replace the session's setting rather than acting as a floor, so they lower a stronger session as readily as they raise a weaker one.
+No form reaches past the turn that invokes the skill. `effort:` in a `SKILL.md` applies to **the turn that invokes the skill and nothing after it**; the next prompt runs on the session's effort again. `model:` reaches even less: it applies to that one turn only when you type the slash command, and **not at all when Claude invokes the skill through the Skill tool**, which is how iwol's skills hand off to each other. Where they apply, both replace the session's setting rather than acting as a floor, so they lower a stronger session as readily as they raise a weaker one.
 
-**Recommendation: set nothing, with one exception.** Keep the README's `Model` and `Effort` columns as the guidance, set no `model:` anywhere, and set no `effort:` except `effort: xhigh` on beads-decompose-plan. Given a plan path, that skill does its whole decomposition in the turn that invokes it, so the one turn `effort:` reaches is the run (see *The exception* below). That change is a separate PR.
+**Recommendation: set nothing, with one exception.** Keep the README's `Model` and `Effort` columns as the guidance, set no `model:` anywhere, and set no `effort:` except `effort: xhigh` on beads-decompose-plan. Given a plan path, that skill usually does its whole decomposition in the turn that invokes it, so the one turn `effort:` reaches is usually the run (see *The exception* below). That change is a separate PR.
 
 ## What the docs say now
 
@@ -61,13 +61,13 @@ Gap: the TUI check covers effort only. The nested session doesn't persist its tr
 
 ## The exception: beads-decompose-plan
 
-Given a readable plan path, beads-decompose-plan has no point where it waits for you. It stops only when the path is missing, asks only when the plan is ambiguous in a way that changes the decomposition, and otherwise runs straight through to the summary (`plugins/iwol/skills/beads-decompose-plan/SKILL.md`, steps 0 and 1 and the closing summary). So `/iwol:beads-decompose-plan <path>` usually does all of its work in turn 1, the turn `effort:` reaches by either invocation path.
+Given a readable plan path and the repository's iwol config, beads-decompose-plan has no point where it waits for you. It stops only when `.claude/iwol-config.md` or the path is missing, asks only when the plan is ambiguous in a way that changes the decomposition, and otherwise runs straight through to the summary (`plugins/iwol/skills/beads-decompose-plan/SKILL.md`: the config read before step 0, steps 0 and 1, and the closing summary). So `/iwol:beads-decompose-plan <path>` usually does all of its work in turn 1, the turn `effort:` reaches by either invocation path.
 
 `effort: xhigh` there would:
 
 - **Raise a weaker session for nearly the whole run.** That's the common case, since Opus 5.5 and Sonnet 5.5 default to `medium`.
 - **Lower only a `max` session.** That's the one cost: someone who deliberately runs a decomposition at `max` would get `xhigh` for it.
-- **Do nothing when it can't help.** Invoked without a path, or stopped by an ambiguity question, the work moves to a later turn at the session's own effort, as it would without the frontmatter.
+- **Do nothing when it can't help.** Invoked without a path or without the iwol config, or stopped by an ambiguity question, the work moves to a later turn at the session's own effort, as it would without the frontmatter.
 
 On balance it's worth setting. Of the skills the README rates `xhigh`, this is the only one where the frontmatter covers the work. Set `effort:` only, not `model:`. `model:` doesn't apply through the Skill tool, and it would take a Fable session off Fable.
 
