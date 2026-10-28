@@ -14,7 +14,7 @@ Three rules:
 
 ## Step 1 — Check the plugin and find what's there
 
-- **The plugin is loaded.** Look at the skills and agent types this session offers. The plugin's skills carry an `iwol:` prefix (`iwol:beads-decompose-plan`, `iwol:beads-implement`, `iwol:beads-summary-and-test`, `iwol:beads-pr`, `iwol:grill-me`, this one, and any others it ships). Its eight worker agents are `iwol:bead-<model>-<effort>`, for each `<model>` in `opus`, `sonnet` and each `<effort>` in `low`, `medium`, `high`, `xhigh`; beads-implement dispatches every bead to one of them. If any are missing, the plugin isn't enabled, or this session started before it was. The fix is enabling it (Claude Code needs the `iwol` marketplace registered on this computer, as the README of `it-works-on-local-dev/skills` describes, and Step 6 writes the repository's setting), then `/reload-plugins` or a new session. Carry on with the other steps either way, and report it at the end.
+- **The plugin is loaded.** Look at the skills and agent types this session offers. The plugin's skills carry an `iwol:` prefix (`iwol:beads-decompose-plan`, `iwol:beads-implement`, `iwol:beads-summary-and-test`, `iwol:beads-pr`, `iwol:grill-me`, `iwol:plan-digest`, this one, and any others it ships; `iwol:side-quest` isn't listed at all, since its `disable-model-invocation` setting hides it from Claude, so never take its absence as a sign). Its eight worker agents are `iwol:bead-<model>-<effort>`, for each `<model>` in `opus`, `sonnet` and each `<effort>` in `low`, `medium`, `high`, `xhigh`; beads-implement dispatches every bead to one of them. If any are missing, the plugin isn't enabled, or this session started before it was. The fix is enabling it (Claude Code needs the `iwol` marketplace registered on this computer, as the README of `it-works-on-local-dev/skills` describes, and Step 6 writes the repository's setting), then `/reload-plugins` or a new session. Carry on with the other steps either way, and report it at the end.
 - **The reviewer.** Right after the plugin check, ask one question: which reviewer does this repository use?
   1. **The public Claude review workflow** in `it-works-on-local-dev/code-review`, which the repository calls from a stub this skill writes (Step 3).
   2. **Another review bot.**
@@ -40,7 +40,7 @@ Three rules:
   - Neither: write a new config from the template.
 - **The review workflow's own repository.** If `.github/workflows/claude-code-review.yml` is triggered by `on: workflow_call`, that file is the reusable review workflow itself, and the repository reviews its own PRs through a separate local stub that calls it by its path. Step 3 writes no stub here.
 - **Local copies of what the plugin ships.** A local copy loads beside the plugin under its bare name, so the session offers two versions of the same skill or agent. Find them, delete nothing, and list them in the report:
-  - in `.claude/skills/`: `beads-decompose-plan`, `beads-implement`, `beads-summary-and-test`, `beads-pr`, `grill-me`, `summary-and-test`, `create-pr` and `create-release`, each only if this session offers the plugin's own `iwol:<name>` (otherwise say the plugin doesn't ship it yet, and it stays); and `beads-setup`, which `/iwol:setup` replaces;
+  - in `.claude/skills/`: `beads-decompose-plan`, `beads-implement`, `beads-summary-and-test`, `beads-pr`, `grill-me`, `plan-digest`, `summary-and-test`, `create-pr` and `create-release`, each only if this session offers the plugin's own `iwol:<name>` (otherwise say the plugin doesn't ship it yet, and it stays); `side-quest`, whenever the session offers the plugin's other skills, since it ships in the same plugin but its `disable-model-invocation` setting keeps `iwol:side-quest` out of the list; and `beads-setup`, which `/iwol:setup` replaces;
   - in `.claude/agents/`: bead workers under any naming, such as `bead-opus-xhigh.md` or `bead-worker-high.md`. That's every `bead-*.md`, and any other agent whose description says beads-implement dispatches beads to it.
 
 ## Step 2 — Work out the config
@@ -211,10 +211,11 @@ Run this step only when Step 1's answer is the public Claude review workflow; wi
 3. If the plugin wasn't loaded, tell the user to run `/reload-plugins` or start a new session once it's enabled: agent definitions only load when a session starts.
 4. Suggest committing the config, the settings, the stub and the `.gitignore` change together, along with deleting the local copies. Don't commit.
 5. Give the next steps:
-   - `/iwol:grill-me` to settle a plan's open questions, if it has any;
+   - `/iwol:grill-me` to settle a plan's open questions, if it has any, then `/iwol:plan-digest` for the go/no-go on the plan;
    - `/iwol:beads-decompose-plan <path to plan>`, once per plan;
    - then for each wave: `/iwol:beads-implement <sub-epic id>`, `/iwol:beads-summary-and-test <sub-epic id>` in a new session, and `/iwol:beads-pr <sub-epic id>` in a new session each time until the wave closes;
    - for work that isn't a wave: `/iwol:start <description>`, from a session started in the main checkout, to do it in its own named worktree, then `/iwol:summary-and-test` to test it and `/iwol:create-pr` to ship it;
+   - `/iwol:side-quest <bead id or prompt>` to do one small task in a worktree of its own and leave it committed on a local branch, which `/iwol:start <branch>` and `/iwol:create-pr` pick up later (name it here even though the session doesn't list it, as in Step 1);
    - any other `iwol:` skills this session offers, such as `/iwol:create-release`.
 
 ## Review stub

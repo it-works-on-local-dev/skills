@@ -3,12 +3,12 @@
   "owner": {
     "name": "it-works-on-local-dev"
   },
-  "description": "The iwol Claude Code plugin: the beads workflow, grill-me, and the PR and release flows.",
+  "description": "The iwol Claude Code plugin: the beads workflow, grill-me and plan-digest, side-quest, the PR and release flows, and the ADHD output style.",
   "plugins": [
     {
       "name": "iwol",
       "source": "./plugins/iwol",
-      "description": "Claude Code skills and worker agents: the beads workflow, grill-me, and the PR and release flows."
+      "description": "Claude Code skills, worker agents and an output style: the beads workflow, grill-me and plan-digest, side-quest, the PR and release flows, and the ADHD output style."
     }
   ]
 }
