@@ -4,7 +4,7 @@ Follow-up from PR 34, which added the README's `Model` and `Effort` columns as r
 
 ## Answer
 
-No form covers a whole run. `model:` and `effort:` in a `SKILL.md` both apply to **the turn that invokes the skill and nothing after it**; the next prompt runs on the session's model and effort again. Both forms replace the session's setting rather than acting as a floor, so they lower a stronger session as readily as they raise a weaker one.
+No form covers a whole run. `effort:` in a `SKILL.md` applies to **the turn that invokes the skill and nothing after it**; the next prompt runs on the session's effort again. `model:` reaches even less: it applies to that one turn only when you type the slash command, and **not at all when Claude invokes the skill through the Skill tool**, which is how iwol's skills hand off to each other. Where they apply, both replace the session's setting rather than acting as a floor, so they lower a stronger session as readily as they raise a weaker one.
 
 **Recommendation: set nothing.** Keep the README's `Model` and `Effort` columns as the only guidance and leave every `plugins/iwol/skills/*/SKILL.md` without `model:` or `effort:`.
 
@@ -14,7 +14,7 @@ No form covers a whole run. `model:` and `effort:` in a `SKILL.md` both apply to
 - Skills frontmatter reference, `effort`: still "when this skill is active. Overrides the session effort level."
 - Model config, *Adjust effort level*: frontmatter effort "applies when that skill or subagent is active, overriding the session level but not the environment variable". The same page's *Effort level after a fallback* section describes it as set "for one turn", which is what the experiment shows.
 
-So the `model` text is accurate. The `effort` text ("while active") reads as if it lasted for the whole skill run; in practice it lasts one turn, like `model`.
+So the `model` text holds only for a typed slash command. When Claude invokes the skill through the Skill tool, the override doesn't apply even for the current turn, and the docs don't say so. The `effort` text ("while active") reads as if it lasted for the whole skill run; in practice it lasts one turn, like `model`.
 
 ## How it was tested
 
@@ -42,12 +42,12 @@ The session ran on `--model opus --effort xhigh` unless noted.
 What each form covers:
 
 - **`model:`** lasts one turn, and only when you type the slash command. When Claude invokes the skill through the Skill tool, the model doesn't switch at all, even in the turn that loaded it. Most iwol skills are invoked that way at least some of the time, for example when beads-pr hands off to beads-implement or when you ask in plain words.
-- **`effort:`** lasts one turn, by either invocation path. It beats `--effort` and a saved level, in both directions, but loses to `CLAUDE_CODE_EFFORT_LEVEL`.
+- **`effort:`** lasts one turn, by either invocation path. It beats `--effort`, in both directions, but loses to `CLAUDE_CODE_EFFORT_LEVEL`. A saved level (from `/effort` or settings) wasn't tested.
 - **`model: inherit`** behaves exactly like leaving `model:` out. With `effort:` set, it gives the same one-turn effort override as `effort:` alone.
 
 Does it downgrade a stronger session?
 
-- **`model:`** does, for that turn: an Opus session ran its skill turn on Sonnet. A Fable session would drop to Opus the same way if a skill said `model: opus`, and the frontmatter has no "else" form to express "Fable if you have it, else Opus".
+- **`model:`** does, for that turn when the slash command is typed: an Opus session ran its skill turn on Sonnet. A Fable session would drop to Opus the same way if a skill said `model: opus`, and the frontmatter has no "else" form to express "Fable if you have it, else Opus".
 - **`effort:`** does too. An `xhigh` session ran the skill turn at `low`. A skill set to its README floor, say `high`, would lower the first turn of an `xhigh` or `max` session. Frontmatter sets a level; it can't express "at least".
 
 Gap: the TUI check covers effort only. The nested session doesn't persist its transcript, so the TUI turns' API model couldn't be read. The turn-1 reply named Sonnet, the docs state the one-turn `model` behaviour, and the headless runs measured it directly.
