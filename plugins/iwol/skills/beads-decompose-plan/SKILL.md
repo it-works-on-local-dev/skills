@@ -31,9 +31,9 @@ Read the whole plan before writing anything. Build a picture of:
 
 If the plan is ambiguous on something that materially changes the decomposition, ask the user before writing beads rather than inventing an answer.
 
-## Step 2 — Choose the execution mode
+## Step 2 — Leave the execution mode out of the beads
 
-Default to **local work**, not worktrees. Only use worktrees if the user explicitly asks for them. When defaulting to local, do not mention worktrees in the beads at all.
+Every wave runs in a worktree of its own, which `/iwol:beads-implement` creates and enters before dispatching anything (its *Branch and worktree names*). The workers start there, so a bead never needs to say where the work runs: do not mention worktrees, branches or the main checkout in the beads at all.
 
 ## Step 3 — Build the structure
 

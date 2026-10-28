@@ -116,7 +116,7 @@ The shared rules are in [`plugins/iwol/skills/start/worktrees.md`](plugins/iwol/
 
 ### Agents
 
-Eight bead workers, `iwol:bead-<model>-<effort>`, for model `opus` or `sonnet` and effort `low`, `medium`, `high` or `xhigh`. `/iwol:beads-implement` dispatches each bead to the worker that matches its `agent:` and `effort:` labels. They're meant only for that: each takes a single bead's text and reports back what it changed.
+Eight bead workers, `iwol:bead-<model>-<effort>`, for model `opus` or `sonnet` and effort `low`, `medium`, `high` or `xhigh`. `/iwol:beads-implement` dispatches each bead to the worker that matches its `agent:` and `effort:` labels. They're meant only for that: each takes a single bead's text and reports back what it changed. Dispatch goes through the `Agent` tool only; the `Workflow` mode the skill once offered on request is gone, since the worker definitions carry the effort it existed to set, and everything after dispatch is judgement the orchestrating session does as results land (the skill's *Why only the Agent tool* says more).
 
 ### Output styles
 
