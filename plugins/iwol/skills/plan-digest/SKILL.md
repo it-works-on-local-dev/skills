@@ -81,9 +81,9 @@ If the plan has no verification strategy, flag that explicitly. Do not assume a 
 
 ### 6. Still open
 
-This should normally be **empty**, because `/iwol:grill-me` should have resolved every material fork before writing the plan.
+`/iwol:grill-me` ends with two lists: the decisions reached, and the questions it routed to someone else (a stakeholder, an architect) because neither the user nor Claude could answer them. List each routed question here as an open item, naming who has to answer it. Do not invent an answer for it: grilling already said nobody in the conversation can. A routed question that affects correctness, reversibility, users, data, security or another system pushes the verdict to "inspect <that question> first".
 
-If something genuinely remains unresolved, put this warning at the very top of the digest:
+Apart from those, this section should be **empty**, because grilling should have resolved every material fork. If a fork that neither list covers genuinely remains unresolved, put this warning at the very top of the digest:
 
 > ⚠️ **Grilling missed this:** <question>
 

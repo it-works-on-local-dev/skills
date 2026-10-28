@@ -49,15 +49,17 @@ Do the work inside the worktree, and only the task. If it turns out to need a de
 
 ## Step 6 — Leave and remove the worktree
 
+First, still inside the worktree, collect what the hand-off needs: `git log --oneline origin/main..<branch>`, and the Full check result from Step 5. In one case below, removing the worktree is the last command the session runs, so Step 7 must report from these without running anything.
+
 `git status --short` must list nothing, apart from the untracked files Files to leave alone lists. If it lists anything else, stop and show it, and keep the worktree.
 
-Otherwise leave and remove the worktree as `worktrees.md` *Leaving and removing one* says: `ExitWorktree` with `action: "keep"`, then `git worktree remove "<path>"` from the folder the session is back in, never with `--force`. Delete no branch: the branch is what this skill hands over.
+Otherwise leave and remove the worktree as `worktrees.md` *Leaving and removing one* says: `ExitWorktree` with `action: "keep"`, then `git worktree remove "<path>"` from the folder the session is back in. When `ExitWorktree` reports that no worktree session is active (the session entered the worktree before a restart, which can happen since Steps 4 and 5 stop for the user), remove it from inside instead, as the last command the session runs, and tell the user the session can be closed. Never add `--force`. Delete no branch: the branch is what this skill hands over.
 
 ## Step 7 — Hand off
 
-Tell the user:
+Tell the user, from what Step 6 collected and without running another command:
 
-- The branch, and what's on it: `git log --oneline origin/main..<branch>`.
+- The branch, and what's on it (the log from Step 6).
 - The Full check result, and, if the commit went in with it failing, that it did.
 - Whether the worktree was removed, or why it was kept.
 - How to pick the branch up: `/iwol:start <branch>` in a later session gives it a worktree again (its Step 2 offers to pick up a branch that exists but isn't checked out), and `/iwol:create-pr` run there ships it. To look at it or carry on by hand instead, `git switch <branch>` in the main checkout; create-pr opens a PR from the branch's commits only in the worktree `/iwol:start` made for it.
