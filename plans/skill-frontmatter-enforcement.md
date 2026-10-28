@@ -6,7 +6,7 @@ Follow-up from PR 34, which added the README's `Model` and `Effort` columns as r
 
 No form covers a whole run. `effort:` in a `SKILL.md` applies to **the turn that invokes the skill and nothing after it**; the next prompt runs on the session's effort again. `model:` reaches even less: it applies to that one turn only when you type the slash command, and **not at all when Claude invokes the skill through the Skill tool**, which is how iwol's skills hand off to each other. Where they apply, both replace the session's setting rather than acting as a floor, so they lower a stronger session as readily as they raise a weaker one.
 
-**Recommendation: set nothing.** Keep the README's `Model` and `Effort` columns as the only guidance and leave every `plugins/iwol/skills/*/SKILL.md` without `model:` or `effort:`.
+**Recommendation: set nothing, with one exception.** Keep the README's `Model` and `Effort` columns as the guidance, set no `model:` anywhere, and set no `effort:` except `effort: xhigh` on beads-decompose-plan. Given a plan path, that skill does its whole decomposition in the turn that invokes it, so the one turn `effort:` reaches is the run (see *The exception* below). That change is a separate PR.
 
 ## What the docs say now
 
@@ -52,12 +52,24 @@ Does it downgrade a stronger session?
 
 Gap: the TUI check covers effort only. The nested session doesn't persist its transcript, so the TUI turns' API model couldn't be read. The turn-1 reply named Sonnet, the docs state the one-turn `model` behaviour, and the headless runs measured it directly.
 
-## Why "set nothing"
+## Why "set nothing" for the other skills
 
 - **Neither form reaches most of a run.** Most iwol skills are multi-turn (grill-me, summary-and-test, beads-pr) or long enough that you reply in the middle (setup, create-pr, create-release). Setting a value would move the first turn only, which is the cheapest part of the run.
-- **Both forms can downgrade.** The README's values are floors ("or higher"), and the frontmatter can't express a floor. Setting `effort: high` on create-pr would lower a session you'd deliberately run at `xhigh`, and setting `model: opus` on beads-pr would take a Fable session off Fable.
+- **Both forms can downgrade.** The README's values are floors ("a stronger model or a higher effort is always fine"), and the frontmatter can't express a floor. Setting `effort: high` on create-pr would lower a session you'd deliberately run at `xhigh`, and setting `model: opus` on beads-pr would take a Fable session off Fable.
 - **`model:` doesn't even apply when Claude invokes the skill.** That makes it unpredictable across the plugin's own hand-offs.
-- **The least harmful form still only reaches turn 1.** `effort: xhigh` on the three `xhigh` skills (beads-decompose-plan, beads-pr, grill-me) can only lower a `max` session, but it still affects only turn 1 and never covers the turns where those skills do their judgement-heavy work. Not worth carrying.
+- **The least harmful form still only reaches turn 1.** `effort: xhigh` on an `xhigh` skill can lower only a `max` session. On beads-pr and grill-me, though, it affects only turn 1 and never covers the turns where they do their judgement-heavy work: grill-me asks one question per turn, and beads-pr waits for you to agree to the triage and to say yes before merging. Not worth carrying there.
+
+## The exception: beads-decompose-plan
+
+Given a readable plan path, beads-decompose-plan has no point where it waits for you. It stops only when the path is missing, asks only when the plan is ambiguous in a way that changes the decomposition, and otherwise runs straight through to the summary (`plugins/iwol/skills/beads-decompose-plan/SKILL.md`, steps 0 and 1 and the closing summary). So `/iwol:beads-decompose-plan <path>` usually does all of its work in turn 1, the turn `effort:` reaches by either invocation path.
+
+`effort: xhigh` there would:
+
+- **Raise a weaker session for nearly the whole run.** That's the common case, since Opus 5.5 and Sonnet 5.5 default to `medium`.
+- **Lower only a `max` session.** That's the one cost: someone who deliberately runs a decomposition at `max` would get `xhigh` for it.
+- **Do nothing when it can't help.** Invoked without a path, or stopped by an ambiguity question, the work moves to a later turn at the session's own effort, as it would without the frontmatter.
+
+On balance it's worth setting. Of the skills the README rates `xhigh`, this is the only one where the frontmatter covers the work. Set `effort:` only, not `model:`. `model:` doesn't apply through the Skill tool, and it would take a Fable session off Fable.
 
 ## If enforcement is still wanted later
 
