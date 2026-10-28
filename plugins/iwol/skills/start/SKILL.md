@@ -1,15 +1,15 @@
 ---
 name: start
-description: 'Start work that isn''t a Beads wave in its own named git worktree: work out the branch name `<prefix>/<description>` the way /iwol:create-pr names PR branches, create `.claude/worktrees/<prefix>-<description>` on that branch from the base branch, prepare it the way the repository''s iwol config says, and move the session into it. Given the name of a worktree that already exists, it moves the session back into it. Use when the user runs /iwol:start <description>, or asks to "start work on …", "start a named worktree for …", "set up a worktree for this fix", or "go back to the worktree for …". It replaces the random worktree names the Claude desktop app gives its sessions. For a Beads wave, /iwol:beads-implement makes the wave''s worktree itself.'
+description: 'Start work that isn''t a Beads wave in its own named git worktree: work out the branch name `<prefix>/<description>` the way /iwol:create-pr names PR branches, create `.claude/worktrees/<prefix>-<description>` on that branch from the base branch, prepare it the way the repository''s iwol config says, move the session into it, then do the work there and stop at checked, uncommitted changes. Given the name of a worktree that already exists, it moves the session back into it and waits. Use when the user runs /iwol:start <description>, or asks to "start work on …", "start a named worktree for …", "set up a worktree for this fix", or "go back to the worktree for …". It replaces the random worktree names the Claude desktop app gives its sessions. For a Beads wave, /iwol:beads-implement makes the wave''s worktree itself.'
 ---
 
 # /iwol:start
 
-Give work that isn't a Beads wave a worktree named after it, before the work starts, and move this session into it. The Claude desktop app makes a worktree for a session before the session starts, with a random name on branch `<branch prefix>/<random name>`, and no skill can rename it. So this skill makes its own: branch `<prefix>/<description>`, the branch `/iwol:create-pr` later opens the PR from, in `.claude/worktrees/<prefix>-<description>`.
+Give work that isn't a Beads wave a worktree named after it, before the work starts, move this session into it, then do the work there. The Claude desktop app makes a worktree for a session before the session starts, with a random name on branch `<branch prefix>/<random name>`, and no skill can rename it. So this skill makes its own: branch `<prefix>/<description>`, the branch `/iwol:create-pr` later opens the PR from, in `.claude/worktrees/<prefix>-<description>`.
 
 It works best from a session started in the main checkout (in the desktop app, with the session's worktree option off). From a session the app started in its own worktree, it still works, but that worktree stays on disk, empty, until the session is archived.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads, all in the Git and GitHub section: the base branch, `Worktrees:` and `Worktree setup:`.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads: in the Git and GitHub section, the base branch, `Worktrees:` and `Worktree setup:`; and the Checks section, for the checks in Step 4.
 
 Read `worktrees.md`, next to this file, before Step 1. It holds the naming rule and the steps for creating and entering a worktree that the other iwol skills share.
 
@@ -27,7 +27,7 @@ The worktree is `.claude/worktrees/<prefix>-<description>`. State the branch and
 
 Run `git fetch origin`, then check in this order:
 
-1. **The branch is checked out in a worktree, or it exists here (`git branch --list <branch>`) and its worktree is there on another branch** (`git worktree list --porcelain`): the user is resuming. Enter it as `worktrees.md` *Entering one* says, which stops if the folder isn't under `.claude/worktrees/` and switches a worktree left on another branch back when nothing would be lost. Skip Step 3 and report what's there (Step 4): `git status --short` and `git log --oneline origin/main..HEAD`.
+1. **The branch is checked out in a worktree, or it exists here (`git branch --list <branch>`) and its worktree is there on another branch** (`git worktree list --porcelain`): the user is resuming. Enter it as `worktrees.md` *Entering one* says, which stops if the folder isn't under `.claude/worktrees/` and switches a worktree left on another branch back when nothing would be lost. Skip Steps 3 and 4 and report what's there (Step 5): `git status --short` and `git log --oneline origin/main..HEAD`. Then wait for the user: an earlier session started that work, so don't carry it on from a guess.
 2. **`.claude/worktrees/<prefix>-<description>` exists** but isn't a worktree in `git worktree list`, or is a worktree on another branch while `<prefix>/<description>` doesn't exist here: the name is taken. Stop, say what's there (for a worktree, the branch it holds), and offer to enter that worktree as it is or to choose another name.
 3. **A PR, open or closed, already used the branch name** (`gh pr list --head <branch> --state all --json number,state,url`): `/iwol:create-pr` opens a PR from the session's branch only when no PR has used its name, so it would branch afresh and the names wouldn't match. Add a word that tells the two apart, say the new names, and check them again from 1.
 4. **The branch exists, here or on `origin`, but isn't checked out anywhere** (`git branch --list <branch>`, `git ls-remote --heads origin <branch>`): ask whether to pick up that branch in the new worktree or choose another name. To pick it up, check out the local branch, or for one only on `origin`, run `git branch <branch> origin/<branch>` first.
@@ -38,10 +38,19 @@ Run `git fetch origin`, then check in this order:
 2. Note where the session is now: in a linked worktree when the two absolute paths `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints differ, otherwise in the main checkout.
 3. Create the worktree as `worktrees.md` *Creating one* says, with `-b <prefix>/<description> origin/main` (or the existing branch from Step 2), then enter it and prepare it as the config's `Worktree setup:` line says. Run the setup after entering, so its commands run in the worktree. If setup fails, report the error and stop; the worktree stays for the user to fix or remove.
 
-## Step 4 — Report
+## Step 4 — Do the work
+
+Do the work in the worktree. What to build comes from the args and from anything this conversation already holds about it, such as a plan, a plan file or earlier messages. If that isn't enough to start on, such as "rework auth" with nothing else, ask what the work should do and wait; the worktree is ready, so the answer goes straight into it. Don't ask about details the code can settle.
+
+- Keep to what was asked. Work found along the way that's outside it goes in the report, not in this change.
+- When it's done, run the narrowest checks that cover what changed, per the config's Checks section, and fix what they turn up. The full check runs in CI once `/iwol:create-pr` pushes the branch.
+- Stop at uncommitted changes.
+
+## Step 5 — Report
 
 - The worktree's path and branch, and that this session now works there: its commands, file edits and sub-agents all run in the worktree, and the main checkout is untouched.
 - What setup ran, or that the config needs none.
+- What was built, the checks that ran and their results, and anything left undone or found outside the work. Skip this when resuming.
 - **If the session started in the desktop app's own worktree** (a linked worktree in Step 3), one line: that worktree stays on disk, empty, until the session is archived or deleted, and starting the next session in the main checkout avoids it.
 - The next steps: `/iwol:summary-and-test` to test the work, then `/iwol:create-pr` to ship it. create-pr opens the PR from this branch and, once the PR has merged, brings the session back to where it started and removes the worktree.
 - In a later session, `/iwol:start <prefix>/<description>` moves that session into this worktree.
