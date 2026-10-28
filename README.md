@@ -6,10 +6,12 @@ The `iwol` plugin for [Claude Code](https://claude.com/claude-code), and the mar
 
 - **The `iwol` plugin** (`plugins/iwol/`) gives Claude Code a way of working from plan to release:
   - the beads workflow, which turns a plan into work items and runs them through parallel sub-agents, manual testing and one pull request per item: `/iwol:beads-decompose-plan`, `/iwol:beads-implement`, `/iwol:beads-summary-and-test` and `/iwol:beads-pr`;
-  - `/iwol:grill-me`, which stress-tests a plan or design before you build it;
+  - `/iwol:grill-me`, which stress-tests a plan or design before you build it, and `/iwol:plan-digest`, which boils the plan down to a one-minute go/no-go before you decompose it;
   - the PR and release flows for everything else: `/iwol:start`, `/iwol:create-pr`, `/iwol:summary-and-test` and `/iwol:create-release`;
+  - `/iwol:side-quest`, which does one task, a bead or a prompt, in a worktree of its own and leaves it committed on a local branch;
   - `/iwol:setup`, which adopts the plugin in a repository;
-  - eight bead worker agents, the sub-agents `/iwol:beads-implement` hands each work item to.
+  - eight bead worker agents, the sub-agents `/iwol:beads-implement` hands each work item to;
+  - an ADHD output style, which shapes every reply around the next action.
 - **The `iwol` marketplace** (`.claude-plugin/marketplace.json`), which lists that one plugin, so Claude Code can install it straight from this repository.
 
 The name `iwol` abbreviates it-works-on-local-dev, the organisation the plugin was written in. It stays `iwol` so that nothing that refers to it has to change: the command prefix `/iwol:`, the agent prefix `iwol:`, and the key `iwol@iwol` that turns the plugin on in a repository's settings.
@@ -77,7 +79,9 @@ Model and Effort are the settings recommended for the session that runs the skil
 | `/iwol:beads-summary-and-test` | Summarises a wave, checks it against the code, and walks you through manual testing one step at a time, splitting a long test into groups run one per session. Failures are recorded on the beads for `/iwol:beads-pr`. | `opus` | `high` |
 | `/iwol:beads-pr` | Takes a tested wave to merged pull requests, one per bead: splits the wave branch into bead branches, opens the PRs, triages review comments and CI failures, sends fixes through `/iwol:beads-implement`, resolves every thread, merges, and closes the wave. | `fable`, else `opus` | `xhigh` |
 | `/iwol:grill-me` | Interviews you relentlessly about a plan or design until every branch of the decision tree is resolved. | `fable`, else `opus` | `xhigh` |
+| `/iwol:plan-digest` | Compresses a plan, usually the one `/iwol:grill-me` just produced, into a digest you can read in under a minute: outcome, blast radius, decisions locked in, risks, proof it works, and a one-line verdict. The go/no-go before `/iwol:beads-decompose-plan`. | `opus` | `high` |
 | `/iwol:start` | Starts work that isn't a wave in its own named worktree, `.claude/worktrees/<prefix>-<description>` on the branch `<prefix>/<description>`, and moves the session into it. Given the name of a worktree that exists, it moves the session back in. | `sonnet` | `low` |
+| `/iwol:side-quest` | Does one task, a bead or a free-form prompt, in its own worktree off the base branch, runs the full check, and commits it to a local branch it never pushes. Then removes the worktree, keeps the branch, and tells you how to pick it up. You run it yourself; Claude doesn't start it on its own. Its row covers the task too, since the session does the work inside the skill, so set what the task needs. | `opus` | `high` |
 | `/iwol:create-pr` | Commits the session's changes and opens a PR against the base branch (draft by default), or pushes follow-up commits to the branch's open PR. Waits for CI, runs the Claude review loop, marks drafts ready, and merges and cleans up the branch the way the repository's config says. | `opus` | `high` |
 | `/iwol:summary-and-test` | The same as `/iwol:beads-summary-and-test` for changes that aren't a wave: summarises a branch or PR, checks it against the code, walks you through manual testing step by step, then fixes what failed and re-tests it. | `opus` | `high` |
 | `/iwol:create-release` | Cuts a production release by merging the Release PR that release-please keeps open, on your explicit go-ahead, after showing its version and changelog and checking new database migrations for destructive statements. Then watches the tag and the GitHub Release, watches the tag's deploy run when the config names a deploy workflow, and verifies production when the config names a version URL. For repositories whose config describes releases. | `opus` | `high` |
@@ -85,7 +89,7 @@ Model and Effort are the settings recommended for the session that runs the skil
 
 ### Session names
 
-In the Claude desktop app, the bead skills name their session after the bead they run on, so the sidebar shows what each session is doing. `/iwol:start` leaves the session's title alone, so that session keeps the name the app gave it. A CLI session can't be renamed, so it keeps its name.
+In the Claude desktop app, the bead skills name their session after the bead they run on, so the sidebar shows what each session is doing. `/iwol:start` and `/iwol:side-quest` leave the session's title alone, so that session keeps the name the app gave it. A CLI session can't be renamed, so it keeps its name.
 
 | Skill | Session name |
 | --- | --- |
@@ -102,16 +106,25 @@ The Claude desktop app gives each session a worktree with a random name before t
 | --- | --- | --- | --- |
 | A Beads wave | `feature/<sub-epic id>-<title>` | `<sub-epic id>-<title>` | `/iwol:beads-implement` |
 | Anything else | `<prefix>/<description>`, with one of `/iwol:create-pr`'s branch prefixes (`feat`, `fix`, `hotfix`, `docs`, `refactor`, `test` or `chore`) | `<prefix>-<description>` | `/iwol:start` |
+| A side quest | `<prefix>/<description>` as above, where a bead's `<description>` is `<bead id> <title>` put through the description rule as one string | `<prefix>-<description>` | `/iwol:side-quest` |
 
 Start the session for new work in the main checkout (in the desktop app, with the session's worktree option off), then run `/iwol:start <description>` or `/iwol:beads-implement <sub-epic id>`. The skill creates the worktree from the base branch and moves the session into it, so its commands, edits and sub-agents all run there, and the desktop app's diff and file panes follow. The main checkout's branch and files are never touched.
 
-A later session gets back in with `/iwol:start <prefix>/<description>`. `/iwol:beads-implement`, `/iwol:beads-summary-and-test`, `/iwol:beads-pr`, and `/iwol:summary-and-test` given a PR, move into the worktree that holds their branch by themselves; `/iwol:summary-and-test` with no PR tests the folder the session is in. Once the work has merged, `/iwol:create-pr` or `/iwol:beads-pr` checks that nothing would be lost, brings the session back to where it started, and removes the worktree. No skill renames or moves the desktop app's own worktrees, and none removes one mid-session.
+A later session gets back in with `/iwol:start <prefix>/<description>`. `/iwol:beads-implement`, `/iwol:beads-summary-and-test`, `/iwol:beads-pr`, and `/iwol:summary-and-test` given a PR, move into the worktree that holds their branch by themselves; `/iwol:summary-and-test` with no PR tests the folder the session is in. Once the work has merged, `/iwol:create-pr` or `/iwol:beads-pr` checks that nothing would be lost, brings the session back to where it started, and removes the worktree. `/iwol:side-quest` removes its worktree as soon as the work is committed, and keeps the branch. No skill renames or moves the desktop app's own worktrees, and none removes one mid-session.
 
 The shared rules are in [`plugins/iwol/skills/start/worktrees.md`](plugins/iwol/skills/start/worktrees.md).
 
 ### Agents
 
 Eight bead workers, `iwol:bead-<model>-<effort>`, for model `opus` or `sonnet` and effort `low`, `medium`, `high` or `xhigh`. `/iwol:beads-implement` dispatches each bead to the worker that matches its `agent:` and `effort:` labels. They're meant only for that: each takes a single bead's text and reports back what it changed.
+
+### Output styles
+
+An output style file `plugins/iwol/output-styles/<file>.md` is the style `iwol:<name>`, where `<name>` is the `name` in its frontmatter. An output style shapes every reply in a session, and the plugin turns none on by itself.
+
+- **`iwol:adhd`** shapes replies for a reader with ADHD: it leads with the next action, numbers multi-step work, restates where things stand every turn, holds tangents back, gives concrete time estimates, and makes finished work visible. It keeps Claude Code's coding instructions. Saying "stop adhd mode" or "normal mode" in the conversation pauses it, and "adhd mode" resumes it.
+
+To select it, run `/output-style iwol:adhd`, or pick it under **Output style** in `/config`. Both save it to `.claude/settings.local.json`. To set it without the menu, for example in the desktop app, or for every project in `~/.claude/settings.json`, add `"outputStyle": "iwol:adhd"` to a settings file; that value is case-sensitive. The new style applies from your next message. `/output-style default` switches back.
 
 ## Releases and versions
 
