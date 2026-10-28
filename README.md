@@ -70,7 +70,7 @@ Naming rule:
 
 ### Skills
 
-Model and Effort are the settings recommended for the session that runs the skill. Each is a floor: a stronger model or a higher effort is always fine. Set them with `/model` and `/effort` in the CLI, or with the model and effort pickers in the Claude desktop app. `/iwol:beads-decompose-plan` sets its own effort, `xhigh`, for the turn that runs the decomposition, so you don't need `/effort` for it. `/iwol:beads-implement`'s row is for the session that orchestrates the wave; its workers take their model and effort from each bead's labels (see [Agents](#agents)).
+Model and Effort are the settings recommended for the session that runs the skill. Each is a floor: a stronger model or a higher effort is always fine. Set them with `/model` and `/effort` in the CLI, or with the model and effort pickers in the Claude desktop app. `/iwol:beads-decompose-plan` sets its own effort, `xhigh`, for the turn you run it in, which given a plan path is usually the whole decomposition; that turn runs at `xhigh` even in a `max` session. If it stops to ask you something, set `/effort xhigh` before you answer. `/iwol:beads-implement`'s row is for the session that orchestrates the wave; its workers take their model and effort from each bead's labels (see [Agents](#agents)).
 
 | Command | What it does | Model | Effort |
 | --- | --- | --- | --- |
