@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.0](https://github.com/it-works-on-local-dev/skills/compare/v1.3.0...v1.4.0) (2026-10-29)
+
+
+### Features
+
+* add plan-digest, side-quest and the adhd output style ([#35](https://github.com/it-works-on-local-dev/skills/issues/35)) ([5f93004](https://github.com/it-works-on-local-dev/skills/commit/5f93004afb80bb87785973c9fd222d481cc36d15))
+* have /iwol:start do the work once its worktree is ready ([#37](https://github.com/it-works-on-local-dev/skills/issues/37)) ([89e3446](https://github.com/it-works-on-local-dev/skills/commit/89e34467dd9f3552aa3518b506c9cd42ea909796))
+* have beads-decompose-plan run its decomposition at xhigh effort ([#41](https://github.com/it-works-on-local-dev/skills/issues/41)) ([6564013](https://github.com/it-works-on-local-dev/skills/commit/6564013b37a5eb0e8af6f0989cac856ec54f8ff4))
+* have beads-implement dispatch through the Agent tool only ([#39](https://github.com/it-works-on-local-dev/skills/issues/39)) ([cf88227](https://github.com/it-works-on-local-dev/skills/commit/cf88227b5f6e97981e97c41dae498564e0bdb7b3))
+
 ## [1.3.0](https://github.com/it-works-on-local-dev/skills/compare/v1.2.1...v1.3.0) (2026-10-25)
 
 
