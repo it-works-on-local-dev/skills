@@ -1,6 +1,7 @@
 ---
 name: beads-decompose-plan
 description: Decompose an implementation plan into a graph of beads (work items) — one epic for the plan, sub-epics as strictly sequential execution waves whose beads all run in parallel, each bead labelled with agent fit, effort, and task kind. Use this skill whenever the user wants to turn a plan, spec, RFC, roadmap, or design doc into beads, tickets, or work items, or says things like "break this plan into beads", "decompose this into work items", "create beads from this plan", "split this plan up for sub-agents", or hands over a plan file and asks for it to be sliced into tasks. Always use this skill for plan decomposition — do not write beads ad hoc without it.
+effort: xhigh
 ---
 
 # Plan to Beads
