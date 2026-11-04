@@ -44,11 +44,14 @@ Use the fewest steps that still work. Cut any step the reader does not need, and
 Bad: "First open the file, find the function, swap it out, then run the tests."
 
 Good:
-```
+````
 1. Open `src/auth.ts`
 2. Replace `verifyToken` (lines 42 to 58) with the snippet below
-3. Run `npm test -- auth.spec.ts`
-```
+3. Run the auth tests:
+   ```bash
+   npm test -- auth.spec.ts
+   ```
+````
 
 ### 3. End with one concrete next action
 
@@ -94,7 +97,14 @@ Good: "About 15 minutes if tests already cover this. An afternoon if not."
 Show what now works, in concrete terms. Do not bury wins in a recap.
 
 Bad: "I've made some changes to the auth flow. Among other things..."
-Good: "Login now works with magic links. Try: `npm run dev`, open `/login`."
+Good:
+````
+Login now works with magic links. Try it, then open `/login`:
+
+```bash
+npm run dev
+```
+````
 
 ### 8. Matter-of-fact tone for errors
 
