@@ -10,7 +10,7 @@ Turn a whole implementation plan into a graph of beads that separate agents can 
 
 The thing that makes this hard: each bead is later handed to a **different agent that sees only that bead's text**. It has no access to the plan, no access to this conversation, and no way to ask a follow-up question. A bead that reads well next to the plan and is useless on its own is the default failure mode. Write every bead as if it were the only thing on the worker's screen, because it will be.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block.
 
 ## Step 0 — Require the plan file (hard stop)
 
@@ -143,4 +143,8 @@ Before presenting the decomposition, reread each bead cold, as if you had never 
 
 Once the epic exists in `bd`, name the session `[<epic id>] decompose`. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them.
 
-Then summarise for the user: the epic, the sub-epics in order, and the beads under each with their labels — making clear that each sub-epic is one `/iwol:beads-implement` prompt whose beads all fan out at once, and that each bead later becomes its own PR.
+Then summarise for the user: the epic, the sub-epics in order, and the beads under each with their labels — making clear that each sub-epic is one `/iwol:beads-implement` prompt whose beads all fan out at once, and that each bead later becomes its own PR. End with the first wave's command, to run in a new session started in the main checkout, as a lead-in line and the command in a `text` block with the real id:
+
+```text
+/iwol:beads-implement <epic id>.1
+```

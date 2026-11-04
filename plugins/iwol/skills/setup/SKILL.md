@@ -208,7 +208,12 @@ Run this step only when Step 1's answer is the public Claude review workflow; wi
    - when the workflow at the stub's ref doesn't offer the credential choice yet, that the stub and config leave it out until a re-check (Step 3);
    - anything that stops the merge stage working as written: no usable merge method, or a merge queue;
    - the local copies to delete, with the commands (`git rm -r .claude/skills/<name>`, `git rm .claude/agents/<file>`), and that anything pointing at them, such as instructions or tests that read `.claude/skills/` or `.claude/agents/`, needs updating too.
-3. If the plugin wasn't loaded, tell the user to run `/reload-plugins` or start a new session once it's enabled: agent definitions only load when a session starts.
+3. If the plugin wasn't loaded, tell the user to reload the plugins or start a new session once it's enabled: agent definitions only load when a session starts. Give the command in a `text` block:
+
+   ```text
+   /reload-plugins
+   ```
+
 4. Suggest committing the config, the settings, the stub and the `.gitignore` change together, along with deleting the local copies. Don't commit.
 5. Give the next steps:
    - `/iwol:grill-me` to settle a plan's open questions, if it has any, then `/iwol:plan-digest` for the go/no-go on the plan;

@@ -9,7 +9,7 @@ Recap what a branch or PR changes, confirm it against the code, then walk the us
 
 It's the counterpart of `/iwol:beads-summary-and-test` for work that isn't a Beads wave: changes made in a session, on a branch, or in a PR. Run it before `/iwol:create-pr`, or while the PR is a draft.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone and the PR rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone and the PR rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
 
 ## Step 0 — Find what to test
 
@@ -72,7 +72,19 @@ When this session's steps are done, or the user stops early:
 
 Don't commit or push. The fixes stay in the working tree for `/iwol:create-pr`, which commits them, or adds them to the PR when the user says so.
 
-Then give a one-line close: how many of this session's steps passed, failed or were blocked, what was fixed and re-tested, and the next step. While groups remain, that's `/iwol:summary-and-test <PR>` in a new session for the next group (name it), started in this folder (give its path, from `git rev-parse --show-toplevel`): the branch is checked out here, and any fixes are uncommitted here. Otherwise it's `/iwol:create-pr`, to commit the work and open the PR or push to it. Nothing more unless the user asks for detail.
+Then give a short close: how many of this session's steps passed, failed or were blocked, what was fixed and re-tested, and the next step, as a lead-in line and one command in a `text` block. While groups remain, the next step is the next group (name it) in a new session started in this folder (give its path, from `git rev-parse --show-toplevel`, in the lead-in): the branch is checked out here, and any fixes are uncommitted here. The block holds the command with the real PR, or without one when this run tested the folder:
+
+```text
+/iwol:summary-and-test <PR>
+```
+
+Otherwise the block holds the command that commits the work and opens the PR or pushes to it:
+
+```text
+/iwol:create-pr
+```
+
+Nothing more unless the user asks for detail.
 
 ### Continuing a split test
 

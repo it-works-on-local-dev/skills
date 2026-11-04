@@ -15,7 +15,11 @@ If a question can be answered by exploring the codebase, explore the codebase in
 - **Keep each question under 300 words**, in plain terminology. Define a specialised term in one sentence the first time it appears, especially for infrastructure and cloud topics (Azure, Redis, networking). If I do not understand something, I will ask you to elaborate; do not pre-empt that with long explanations.
 - **Be honest and constructive.** I am a front-end developer; many plans touch areas outside my expertise. If an idea is a different kind of thing than I think it is, say so plainly. Name the trade-offs, recommend one option, and explain why. Do not rubber-stamp.
 - **Offer options as a short labelled list** (A, B, C) with my recommended option stated explicitly, then ask for agreement.
-- **Track two running lists** and hand both over at the end: the decisions we reached, and the questions that must go to someone else (a stakeholder, an architect) because neither of us can answer them.
+- **Track two running lists** and hand both over at the end: the decisions we reached, and the questions that must go to someone else (a stakeholder, an architect) because neither of us can answer them. Then offer the next step, in this same session, as a lead-in line and the command in a `text` block:
+
+  ```text
+  /iwol:plan-digest
+  ```
 
 ## Before the first question
 

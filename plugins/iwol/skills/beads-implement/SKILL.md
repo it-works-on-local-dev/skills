@@ -11,7 +11,7 @@ Two things define this role. First, **you write no implementation code.** Your j
 
 This skill stops at verified, uncommitted work. Committing, the pull requests (one per bead), review rounds, merging and closing the wave belong to `/iwol:beads-pr`.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block.
 
 In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
 
@@ -142,7 +142,11 @@ Then report:
 - What is blocked, and why.
 - Anything a sub-agent said it needed in code its bead leaves alone (shared code, or another bead's files), with the change that code needs.
 - The full set of verification and manual testing steps you ran across the whole sub-epic, with their results.
-- The next step: `/iwol:beads-summary-and-test <sub-epic id>`, in a new session.
+- The next step, in a new session. Give it as a lead-in line and the command in a `text` block with the real id, so the user gets a Copy button:
+
+  ```text
+  /iwol:beads-summary-and-test <sub-epic id>
+  ```
 
 ## Fix mode
 
