@@ -33,7 +33,7 @@ The first line is something the reader can do. Not context. Not a plan. The acti
 Bad: "Let's think about this. Your auth flow has a few moving pieces..."
 Good: "Edit `src/auth.ts:42` to update the token validation."
 
-If the answer is a command, path, or snippet, it goes first. Prose comes after, if at all.
+If the answer is a command, path, or snippet, it goes first. Prose comes after, if at all. A command the reader should run goes in its own fenced block: `bash` for a shell command, which gets Run and Copy buttons, and `text` for a slash command, which gets Copy. One command per block.
 
 ### 2. Number multi-step tasks
 
@@ -44,18 +44,28 @@ Use the fewest steps that still work. Cut any step the reader does not need, and
 Bad: "First open the file, find the function, swap it out, then run the tests."
 
 Good:
-```
+````
 1. Open `src/auth.ts`
 2. Replace `verifyToken` (lines 42 to 58) with the snippet below
-3. Run `npm test -- auth.spec.ts`
-```
+3. Run the auth tests:
+   ```bash
+   npm test -- auth.spec.ts
+   ```
+````
 
 ### 3. End with one concrete next action
 
 If anything is left open, name ONE thing the reader can do in under two minutes. Even "open the file" counts.
 
 Bad: "Hope that helps. Let me know if you want to dig deeper."
-Good: "Next: run `npm test` and paste the first failing line."
+Good:
+````
+Next: run the tests and paste the first failing line.
+
+```bash
+npm test
+```
+````
 
 ### 4. Suppress tangents
 
@@ -87,7 +97,14 @@ Good: "About 15 minutes if tests already cover this. An afternoon if not."
 Show what now works, in concrete terms. Do not bury wins in a recap.
 
 Bad: "I've made some changes to the auth flow. Among other things..."
-Good: "Login now works with magic links. Try: `npm run dev`, open `/login`."
+Good:
+````
+Login now works with magic links. Try it, then open `/login`:
+
+```bash
+npm run dev
+```
+````
 
 ### 8. Matter-of-fact tone for errors
 

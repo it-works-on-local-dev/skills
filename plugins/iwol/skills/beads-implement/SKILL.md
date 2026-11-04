@@ -11,7 +11,7 @@ Two things define this role. First, **you write no implementation code.** Your j
 
 This skill stops at verified, uncommitted work. Committing, the pull requests (one per bead), review rounds, merging and closing the wave belong to `/iwol:beads-pr`.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block.
 
 In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
 
@@ -39,7 +39,7 @@ Then name the session `[<id>] implementation`, where `<id>` is the ID this run w
 
 Every wave runs in its own worktree, named as in *Branch and worktree names* below, wherever the session started; the main checkout's branch is never switched. Create, enter and prepare it as `../start/worktrees.md` says (read it first), before dispatching anything. For a leaf bead, use its sub-epic's branch and worktree.
 
-- **The wave's branch already exists** (`git branch --list 'feature/<sub-epic-id>-*'`): this is a re-run (after a blocked bead, a usage limit, or in a new session). Enter the wave's worktree as *Entering one* says, which also covers a worktree left on a bead branch. If the branch isn't checked out anywhere and the wave's worktree doesn't exist, create it on the branch (*Creating one*, without `-b`) and enter that. A wave started before waves had their own worktrees may be checked out in the main checkout: then run there, and if this session isn't there, stop and tell the user to run from the main checkout. Carry on with the beads that aren't closed, except those open only because of an open finding (a `Finding [` comment with no later `Resolved`, `Deferred` or `Declined` comment). Testing or review reopened those, and they're fixed through `/iwol:beads-pr`'s fix round, not implemented again. A `blocked` bead the user has since sorted out is run again here.
+- **The wave's branch already exists** (`git branch --list 'feature/<sub-epic-id>-*'`): this is a re-run (after a blocked bead, a usage limit, or in a new session). Enter the wave's worktree as *Entering one* says, which also covers a worktree left on a bead branch. If the branch isn't checked out anywhere and the wave's worktree doesn't exist, create it on the branch (*Creating one*, without `-b`) and enter that. A wave started before waves had their own worktrees may be checked out in the main checkout: then run there, and if this session isn't there, stop and tell the user to run from the main checkout, giving the command in a `text` block with the real id. Carry on with the beads that aren't closed, except those open only because of an open finding (a `Finding [` comment with no later `Resolved`, `Deferred` or `Declined` comment). Testing or review reopened those, and they're fixed through `/iwol:beads-pr`'s fix round, not implemented again. A `blocked` bead the user has since sorted out is run again here.
 - **Otherwise,** create the wave's worktree on a new branch from `origin/main` (*Creating one*): `git worktree add "<main checkout>/.claude/worktrees/<sub-epic-id>-<title>" -b feature/<sub-epic-id>-<title> origin/main`. Enter it, and prepare it as the config's `Worktree setup:` line says (nothing when it's `none`). Uncommitted changes in the folder the session started in stay there, and aren't part of the wave.
 
 Entering the worktree is what makes the wave run there: sub-agents start in the session's folder, so once the session is in the wave's worktree, every bead's edits land there. Git lets a branch be checked out in only one worktree, so every later session for this wave (`/iwol:beads-summary-and-test`, `/iwol:beads-pr`) enters the same worktree. The wave branch stays local. `/iwol:beads-pr` later splits it into one branch and PR per bead, using the file lists recorded in Step 4, and removes the wave's worktree once every PR has merged.
@@ -76,7 +76,7 @@ This is a hard constraint on the tool call itself, not a suggestion to weigh.
 - Dispatch every bead with its own `Agent` call, the whole wave in one message so the calls run concurrently. The `Agent` tool is the only dispatch mode: there's no `Workflow` mode, and `- use a workflow` on the invocation isn't something this skill does (see *Why only the Agent tool* below).
 - Dispatch every bead to the worker definition for its two labels: `subagent_type: iwol:bead-<agent>-<effort>`, such as `iwol:bead-opus-xhigh`. The definitions come from the `iwol` plugin, not from `.claude/agents/`. Those definitions set the model and the effort. The `Agent` tool takes a `model` but has no effort parameter, so a definition is the only way to set effort.
 - On every dispatch, also pass `model` set to the bead's `agent:` label.
-- If the definition for a bead's label pair doesn't exist, first check that the pair is one the plugin ships: `opus` or `sonnet`, each at `low`, `medium`, `high` or `xhigh`. If it isn't (`effort:max`, `agent:haiku`, or a typo), that is a defect in the bead. Stop and flag it to the user, as for a missing label below. Only for a shipped pair with no definition, stop because the `iwol` plugin isn't loaded in this session. Ask the user to run `/reload-plugins` or start a new session; don't create a definition file.
+- If the definition for a bead's label pair doesn't exist, first check that the pair is one the plugin ships: `opus` or `sonnet`, each at `low`, `medium`, `high` or `xhigh`. If it isn't (`effort:max`, `agent:haiku`, or a typo), that is a defect in the bead. Stop and flag it to the user, as for a missing label below. Only for a shipped pair with no definition, stop because the `iwol` plugin isn't loaded in this session. Ask the user to run `/reload-plugins` or start a new session, giving the command in a `text` block; don't create a definition file.
 - Never omit the model or the effort to let the tool auto-route or inherit a default. Never round an `effort:xhigh` bead down to `high` because a model doesn't nominally support it, and never swap `opus` for `sonnet` (or vice versa) because the task looks simpler or costlier than the label implies.
 - If a bead is missing either label, that is a defect in the bead. Stop and flag it to the user rather than guessing a model or effort to fill the gap.
 
@@ -142,7 +142,11 @@ Then report:
 - What is blocked, and why.
 - Anything a sub-agent said it needed in code its bead leaves alone (shared code, or another bead's files), with the change that code needs.
 - The full set of verification and manual testing steps you ran across the whole sub-epic, with their results.
-- The next step: `/iwol:beads-summary-and-test <sub-epic id>`, in a new session.
+- The next step, in a new session. Give it as a lead-in line and the command in a `text` block with the real id, so the user gets a Copy button:
+
+  ```text
+  /iwol:beads-summary-and-test <sub-epic id>
+  ```
 
 ## Fix mode
 

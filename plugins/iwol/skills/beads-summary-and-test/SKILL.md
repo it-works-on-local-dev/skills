@@ -9,7 +9,7 @@ Recap what an epic actually did, confirm it against the real codebase, then hand
 
 It sits between `/iwol:beads-implement` and `/iwol:beads-pr` and is normally run on a wave's sub-epic. It finds problems and records them; it never fixes them. `/iwol:beads-pr` reads what this skill records and takes it from there.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block.
 
 ## Step 0 — Require the epic ID (hard stop)
 
@@ -79,7 +79,19 @@ If the user wants it fixed right away, explain that fixes run through `/iwol:bea
 
 Save the whole plan as one comment on the sub-epic, starting `Manual test plan (<date>)`. Save it once before the first step, with every step `not run`, and again whenever a session's testing ends (after its group's last step, or when the user stops early), with the results so far. A step that a later `Re-tested` comment on the sub-epic covers counts as `pass (re-tested <date>)`, so a newer plan keeps that result. The latest one is always the current state. Give one line per step: `Step <step> — <title> [<bead-id>, …]: start <URL, or device and screen or deep link>; setup <what you did first, such as the SQL you ran, or "none">; <action>; <expected> — pass | fail (finding <id>) | blocked | not run`. In a plan with groups, put a `Group <g> of <G> — <title>` line before each group's steps. End with a `Beads covered: <bead-id>, …` line listing every completed bead the plan accounts for, whether through steps or checked without one (docs, tests, changes with nothing to see on screen, things you verified yourself). List every bead whose behaviour the step depends on. Each bead gets its own PR, and `/iwol:beads-pr` uses these lines to work out which steps to re-run after fixing a bead, and to write each PR's description.
 
-Then give a one-line close: how many of this session's steps passed, failed or were blocked, and the next step, in a new session. While groups remain, that's `/iwol:beads-summary-and-test <sub-epic id>` for the next group (name it). After the last group, it's `/iwol:beads-pr <sub-epic id>`. Nothing more unless the user asks for detail.
+Then give a short close: how many of this session's steps passed, failed or were blocked, and the next step, in a new session, as a lead-in line and one command in a `text` block with the real id. While groups remain, the lead-in names the next group and the block holds:
+
+```text
+/iwol:beads-summary-and-test <sub-epic id>
+```
+
+After the last group, it holds:
+
+```text
+/iwol:beads-pr <sub-epic id>
+```
+
+Nothing more unless the user asks for detail.
 
 ### Continuing a split test
 

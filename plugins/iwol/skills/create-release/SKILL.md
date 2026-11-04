@@ -17,12 +17,12 @@ Run this only when the user asks to release or deploy to production. Never merge
 
 ## Config
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block.
 
 Then look at its Releases section:
 
 - **`Releases: none`:** say this repository has no release flow, and stop. Change nothing.
-- **Otherwise,** take these values from it. If any is missing, as in a config written before the field existed, stop and ask the user to run `/iwol:setup` to add it. Don't guess a value. A field that says `none` where the list below allows it is set, not missing.
+- **Otherwise,** take these values from it. If any is missing, as in a config written before the field existed, stop and ask the user to run `/iwol:setup` to add it, giving the command in a `text` block. Don't guess a value. A field that says `none` where the list below allows it is set, not missing.
   - **Release PR branch:** the Release PR's head branch.
   - **Release workflow:** the workflow file that creates the tag and the GitHub Release.
   - **Deploy workflow:** the workflow file the tag push runs, and what gates its deploy. It may be `none`, or the release workflow itself when the only deploy step is moving a `v<major>` tag. Both are valid values, not missing ones: step 5 then watches only the release workflow's run.
@@ -93,7 +93,13 @@ Note the PR's `headRefOid`: step 4 pins the merge to it.
 git ls-remote --exit-code --tags origin "refs/tags/vX.Y.Z"
 ```
 
-Exit code 2 means the tag is free. If it prints the tag (exit code 0), stop and don't merge. Merging would push no tag, so `main`'s changes would never deploy, and step 5 would find the old tag's green deploy run and report success. Tell the user to land a PR on `main` through the repository's normal PR flow (`/iwol:create-pr`) with a `Release-As: <next version>` footer in the body of the commit that reaches `main`, then run this skill again once the Release PR shows that version. With `Merge method: squash`, the squash commit gets a blank body by default, so the footer in a branch commit would never reach `main`: pass it with `gh pr merge <PR> --squash --body "Release-As: <next version>"`.
+Exit code 2 means the tag is free. If it prints the tag (exit code 0), stop and don't merge. Merging would push no tag, so `main`'s changes would never deploy, and step 5 would find the old tag's green deploy run and report success. Tell the user to land a PR on `main` through the repository's normal PR flow with a `Release-As: <next version>` footer in the body of the commit that reaches `main`, then run this skill again once the Release PR shows that version. Give the PR skill in a `text` block:
+
+```text
+/iwol:create-pr
+```
+
+With `Merge method: squash`, the squash commit gets a blank body by default, so the footer in a branch commit would never reach `main`: pass it with `gh pr merge <PR> --squash --body "Release-As: <next version>"`.
 
 **Check the release for migrations.** If the config's migration directories are `none`, skip this check and say the repository has none to check. Otherwise, the release's deploy may apply pending migrations before the new build takes traffic, so the build still serving runs against the new schema until cutover. Find the last released tag reachable from `origin/main`:
 

@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Do one task off to the side: a bead, or a free-form prompt such as "update the docs to mention the new tools". It's done in a worktree of its own, cut from the base branch, and committed to a local branch that's never pushed. Then the worktree is removed, the branch is kept, and the session is back where it started, with its own folder untouched.
 
-Read `.claude/iwol-config.md` first. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads: in the Git and GitHub section, the base branch, `Worktrees:`, `Worktree setup:` and `PR title format:`; in Checks, `Full check:` and `Format:`; and the Files to leave alone section.
+Read `.claude/iwol-config.md` first. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it, giving the command in a `text` block. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads: in the Git and GitHub section, the base branch, `Worktrees:`, `Worktree setup:` and `PR title format:`; in Checks, `Full check:` and `Format:`; and the Files to leave alone section.
 
 Read `../start/worktrees.md` before Step 2. It holds the naming rule and the steps for creating, entering, leaving and removing a worktree that every iwol skill follows. `cd` into the worktree isn't enough, since the shell goes back to the session's folder after every command; that's why it enters the worktree with `EnterWorktree`.
 
@@ -34,7 +34,7 @@ Run `git fetch origin`, then check that the names are free: no branch `<branch>`
 
 ## Step 3 — Create the worktree and move in
 
-1. Check that `.claude/worktrees/` is git-ignored: `git check-ignore -q --no-index .claude/worktrees/probe` must succeed. If it doesn't, stop and ask the user to run `/iwol:setup`, which adds the rule.
+1. Check that `.claude/worktrees/` is git-ignored: `git check-ignore -q --no-index .claude/worktrees/probe` must succeed. If it doesn't, stop and ask the user to run `/iwol:setup`, which adds the rule, giving the command in a `text` block.
 2. Create the worktree as `worktrees.md` *Creating one* says, with `-b <branch> origin/main`, then enter it as *Entering one* says and prepare it there as the config's `Worktree setup:` line says. If setup fails, report the error and stop; the worktree stays for the user to fix or remove.
 
 ## Step 4 — Do the task
@@ -62,7 +62,19 @@ Tell the user, from what Step 6 collected and without running another command:
 - The branch, and what's on it (the log from Step 6).
 - The Full check result, and, if the commit went in with it failing, that it did.
 - Whether the worktree was removed, or why it was kept.
-- How to pick the branch up: `/iwol:start <branch>` in a later session gives it a worktree again (its Step 2 offers to pick up a branch that exists but isn't checked out), and `/iwol:create-pr` run there ships it. To look at it or carry on by hand instead, `git switch <branch>` in the main checkout; create-pr opens a PR from the branch's commits only in the worktree `/iwol:start` made for it.
+- How to pick the branch up: `/iwol:start` in a later session gives it a worktree again (its Step 2 offers to pick up a branch that exists but isn't checked out), and `/iwol:create-pr` run there ships it. Give the command in a `text` block with the real branch:
+
+  ```text
+  /iwol:start <branch>
+  ```
+
+  To look at it or carry on by hand instead, the user switches to the branch in the main checkout. Give that in a `text` block too, with the real branch: a `bash` block's Run button would switch the session's own folder, not the main checkout.
+
+  ```text
+  git switch <branch>
+  ```
+
+  create-pr opens a PR from the branch's commits only in the worktree `/iwol:start` made for it.
 
 ## Non-goals
 

@@ -9,7 +9,7 @@ Turn this session's changes into one or more PRs against the base branch. It's t
 
 ## Read the config first
 
-Read `.claude/iwol-config.md` before anything else. It holds everything specific to this repository, and every step below looks its values up there. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. If a line this skill needs is missing from it, as in a config written before that line existed, stop and ask the user to run `/iwol:setup` to add it. Never guess a value.
+Read `.claude/iwol-config.md` before anything else. It holds everything specific to this repository, and every step below looks its values up there. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. If a line this skill needs is missing from it, as in a config written before that line existed, stop and ask the user to run `/iwol:setup` to add it, giving the command in a `text` block. Never guess a value.
 
 In this skill, `main` means the base branch the config's Git and GitHub section names, and `origin/main` means that branch on `origin`. The lines it reads:
 

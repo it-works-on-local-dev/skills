@@ -9,7 +9,7 @@ Take one tested wave from the local wave branch to merged pull requests, then cl
 
 Each run moves the wave's PRs forward and then ends. You run it again for the next step — ideally in a new session. Every run rebuilds its picture from git, GitHub and `bd`, so it never needs an earlier session's conversation. That's the point: a review round should start from a small context, not from the 300k–600k tokens an implementation or testing session ends with.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone, the PR reviewer and how it signals, CI, and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. Its CI section names the workflow and its gating jobs, where they run (`Runs on:`, `hosted` or `self-hosted:` with how to tell a queued job is waiting for one of the repository's own runners) and where recovering a stuck run is documented (`Recovering a stuck run:`), or says `CI: none` when no workflow runs on PRs. Under `CI: none` there's no CI to read or wait for: Step 1 reads none, *Stage — Triage* collects no failing checks, *Stage — Merge*'s CI condition doesn't apply, and *Stage — Close the wave* skips its CI read and says so in its report. Its Git and GitHub section says how PRs merge (`Merge method: merge` or `Merge method: squash`) and how they're titled (`PR title format: free` or `PR title format: conventional commit`). If either line is missing, as in a config written before they existed, stop and ask the user to run `/iwol:setup` to add it. Don't assume a method or a format. Below, "the reviewer" means the review bot the config names. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone, the PR reviewer and how it signals, CI, and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. Its CI section names the workflow and its gating jobs, where they run (`Runs on:`, `hosted` or `self-hosted:` with how to tell a queued job is waiting for one of the repository's own runners) and where recovering a stuck run is documented (`Recovering a stuck run:`), or says `CI: none` when no workflow runs on PRs. Under `CI: none` there's no CI to read or wait for: Step 1 reads none, *Stage — Triage* collects no failing checks, *Stage — Merge*'s CI condition doesn't apply, and *Stage — Close the wave* skips its CI read and says so in its report. Its Git and GitHub section says how PRs merge (`Merge method: merge` or `Merge method: squash`) and how they're titled (`PR title format: free` or `PR title format: conventional commit`). If either line is missing, as in a config written before they existed, stop and ask the user to run `/iwol:setup` to add it, giving the command in a `text` block. Don't assume a method or a format. Below, "the reviewer" means the review bot the config names. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
 
 Two rules define the role. First, **you write no implementation code and dispatch no sub-agents.** Fixes go through beads-implement's fix mode. Your job is committing, splitting, pushing, triage, replies, review requests, merging and closing. Second, **nothing merges without the user's explicit yes in the current run.**
 
@@ -58,7 +58,7 @@ Gather everything fresh:
 
 - The sub-epic and its child beads: status and comments (`bd show`, `bd children`, `bd comments <id>`), and each bead's files.
 - **Open findings**: `Finding` comments on the wave's beads with no later `Resolved <id>`, `Deferred <id>` or `Declined <id>` comment (see *Finding comments*).
-- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, and ask whether to go on.
+- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, giving the command in a `text` block with the real id, and ask whether to go on.
 - **Re-test list**: steps named in `Re-test needed` comments on the sub-epic, plus steps the test plan marks `blocked` or `not run`. Leave out any step a later `Re-tested` comment covers.
 - The wave branch and working tree: current branch, uncommitted changes.
 - **Each bead's PR**, from the bead's external ref `gh-<n>`, set when its PR opens.
@@ -115,7 +115,11 @@ Items 6–9 cover an open refresh PR too, with the differences *Stage — Refres
 
 End with one line per PR: its number, its bead (or "refresh"), and where it stands, for example "waiting on review", "requested, not picked up yet", "CI running", "CI queued", "CI queued behind other work", "reviewer usage limit", "waiting for <bead-id> to merge", "check broken by #<n> on main", "ready to merge" or "merged".
 
-**Do not wait, poll, sleep or schedule a wake-up** for the reviewer or CI. Report what's pending and tell the user to run `/iwol:beads-pr <id>` again, in a new session, once it has landed.
+**Do not wait, poll, sleep or schedule a wake-up** for the reviewer or CI. Report what's pending and tell the user to run this skill again, in a new session, once it has landed. Give the command in a `text` block with the real id:
+
+```text
+/iwol:beads-pr <sub-epic-id>
+```
 
 ## Stage — Triage
 
@@ -226,7 +230,13 @@ If the re-test list isn't empty, run it on the wave branch, kept current, becaus
    - Record the PR on the bead: `bd update <bead-id> --external-ref gh-<n>`.
 5. Switch back to the wave branch and restore its state (see *Branches*).
 6. Don't request reviews if the config says the reviewer reviews new PRs by itself; otherwise request one on each new PR (see *Review requests*). Turn the desktop app's Auto-fix off on each new PR, as *Step 1 — Read the state* says. CI failures go through triage and fix rounds, and a second fixer would push competing commits.
-7. If these were the wave's first PRs, end the run. Tell the user to run `/iwol:beads-pr <id>` in a new session once the reviews are in. Mention that a wave's worth of PRs means as many reviews at once, so the reviewer's usage limit may come up.
+7. If these were the wave's first PRs, end the run. Tell the user to run this skill in a new session once the reviews are in, giving the command in a `text` block with the real id:
+
+   ```text
+   /iwol:beads-pr <sub-epic-id>
+   ```
+
+   Mention that a wave's worth of PRs means as many reviews at once, so the reviewer's usage limit may come up.
 
 ## Stage — Sync with main
 
@@ -296,7 +306,11 @@ The sub-epic records it: `Refresh PR #<n>` when it opens, and `Refresh merged in
 2. Run the rebuild command of each row that ships once per wave. If that changed files outside those rows, stop and show them. Stage those files (`git add -- <files>`) and compare them with `main`, not with the branch, which an earlier attempt may have left holding an unpushed or unmerged refresh commit: `git diff --cached --quiet origin/main -- <files>`. If they match `main`, it already has them current: put the branch's files back (`git restore --staged --worktree -- <files>`), add `Refresh not needed at <sha>` on the sub-epic, with `<sha>` the `origin/main` commit you rebuilt on, switch back to the wave branch, and carry on with Step 1's list.
 3. If anything is staged (`git diff --cached --quiet` fails), commit those files with the subject `chore: refresh <files> after wave <n>` under `conventional commit`, so it stays out of the changelog, or `Wave <n>: refresh <files>` under `free`. In the body, name the command and the wave's bead PRs, then add the commit attribution line. Push with `-u`, even when there was nothing new to commit: the branch still differs from `main`.
 4. Open the PR against `main`, with the commit's subject as its title. Body: `Refreshes <files> for wave <n> of <epic title> (<sub-epic-id>), now that its bead PRs have merged: #<n>, #<n>, …`, the command it ran, and the PR attribution line, with a `/review` line just before it only when the user asked this run for a review model, effort or credential (see *Requested review options* under *Review requests*). Add `Refresh PR #<n>` on the sub-epic. Request a review only if the reviewer doesn't review new PRs by itself (see *Review requests*), and turn the desktop app's Auto-fix off on it, as *Step 1 — Read the state* says.
-5. Switch back to the wave branch, and end the run. Tell the user to run `/iwol:beads-pr <id>` again, in a new session, once its CI and review are in.
+5. Switch back to the wave branch, and end the run. Tell the user to run this skill again, in a new session, once its CI and review are in, giving the command in a `text` block with the real id:
+
+   ```text
+   /iwol:beads-pr <sub-epic-id>
+   ```
 
 **Moving it on.** Step 1's items 6–9 treat the open refresh PR like a bead PR, except:
 
@@ -333,7 +347,11 @@ The sub-epic records it: `Refresh PR #<n>` when it opens, and `Refresh merged in
    - When the run that tells didn't cover every one of the wave's merges, the PRs whose merges it left out: the workflow skipped them on `main`, so no CI ran with them there.
    - What the clean-up removed, and anything it left for the user to decide.
    - The findings deferred to later beads, one line each.
-   - The next step: `/iwol:beads-implement <next sub-epic id>` in a new session.
+   - The next step, in a new session. Give it as a lead-in line and the command in a `text` block with the real id:
+
+     ```text
+     /iwol:beads-implement <next sub-epic id>
+     ```
 
    If this was the epic's last open sub-epic, say the whole epic is complete and ask whether to close it.
 

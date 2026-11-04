@@ -9,7 +9,7 @@ Give work that isn't a Beads wave a worktree named after it, before the work sta
 
 It works best from a session started in the main checkout (in the desktop app, with the session's worktree option off). From a session the app started in its own worktree, it still works, but that worktree stays on disk, empty, until the session is archived.
 
-Read `.claude/iwol-config.md` first. It holds everything specific to this repository. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads: in the Git and GitHub section, the base branch, `Worktrees:` and `Worktree setup:`; and the Checks section, for the checks in Step 4.
+Read `.claude/iwol-config.md` first. It holds everything specific to this repository. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it, giving the command in a `text` block. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads: in the Git and GitHub section, the base branch, `Worktrees:` and `Worktree setup:`; and the Checks section, for the checks in Step 4.
 
 Read `worktrees.md`, next to this file, before Step 1. It holds the naming rule and the steps for creating and entering a worktree that the other iwol skills share.
 
@@ -37,7 +37,7 @@ Run `git fetch origin`, then check in this order:
 
 ## Step 3 — Create the worktree and move in
 
-1. Check that `.claude/worktrees/` is git-ignored: `git check-ignore -q --no-index .claude/worktrees/probe` must succeed. If it doesn't, stop and ask the user to run `/iwol:setup`, which adds the rule; without it, every file in the worktree shows up as untracked in the main checkout.
+1. Check that `.claude/worktrees/` is git-ignored: `git check-ignore -q --no-index .claude/worktrees/probe` must succeed. If it doesn't, stop and ask the user to run `/iwol:setup`, which adds the rule, giving the command in a `text` block; without that rule, every file in the worktree shows up as untracked in the main checkout.
 2. Note where the session is now: in a linked worktree when the two absolute paths `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints differ, otherwise in the main checkout.
 3. Create the worktree as `worktrees.md` *Creating one* says, with `-b <prefix>/<description> origin/main` (or the existing branch from Step 2), then enter it and prepare it as the config's `Worktree setup:` line says. Run the setup after entering, so its commands run in the worktree. If setup fails, report the error and stop; the worktree stays for the user to fix or remove.
 
@@ -57,7 +57,12 @@ Otherwise, do the work in the worktree. What to build comes from the args and fr
 - What setup ran, or that the config needs none.
 - What was built, the checks that ran and their results, and anything left undone or found outside the work. Skip this when Step 4 was skipped.
 - **If the session started in the desktop app's own worktree** (a linked worktree in Step 3), one line: that worktree stays on disk, empty, until the session is archived or deleted, and starting the next session in the main checkout avoids it.
-- The next steps: `/iwol:summary-and-test` to test the work, then `/iwol:create-pr` to ship it. create-pr opens the PR from this branch and, once the PR has merged, brings the session back to where it started and removes the worktree.
+- The next steps: test the work, then ship it with `/iwol:create-pr`, which opens the PR from this branch and, once the PR has merged, brings the session back to where it started and removes the worktree. Give the first in a `text` block:
+
+  ```text
+  /iwol:summary-and-test
+  ```
+
 - In a later session, `/iwol:start <prefix>/<description>` moves that session into this worktree.
 
 ## Non-goals
