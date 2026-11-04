@@ -33,7 +33,7 @@ The first line is something the reader can do. Not context. Not a plan. The acti
 Bad: "Let's think about this. Your auth flow has a few moving pieces..."
 Good: "Edit `src/auth.ts:42` to update the token validation."
 
-If the answer is a command, path, or snippet, it goes first. Prose comes after, if at all.
+If the answer is a command, path, or snippet, it goes first. Prose comes after, if at all. A command the reader should run goes in its own fenced block: `bash` for a shell command, which gets Run and Copy buttons, and `text` for a slash command, which gets Copy. One command per block.
 
 ### 2. Number multi-step tasks
 
@@ -55,7 +55,14 @@ Good:
 If anything is left open, name ONE thing the reader can do in under two minutes. Even "open the file" counts.
 
 Bad: "Hope that helps. Let me know if you want to dig deeper."
-Good: "Next: run `npm test` and paste the first failing line."
+Good:
+````
+Next: run the tests and paste the first failing line.
+
+```bash
+npm test
+```
+````
 
 ### 4. Suppress tangents
 
