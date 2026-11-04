@@ -1,6 +1,7 @@
-# The review workflow pins anthropics/claude-code-action to a commit, and that action installs the
-# Claude Code version its own release names, so a model alias such as opus only moves on to a newer
-# model when the pin does. This opens a PR each week for every action with a newer release.
+# This opens a PR each week for every action the CI and release workflows pin that has a newer
+# release. The review stub calls code-review's workflow at @main, so claude-code-action's pin
+# lives there, not here. None of these actions ship in the plugin, so the PRs keep Dependabot's
+# chore(deps) titles and cut no release.
 version: 2
 updates:
   - package-ecosystem: github-actions
