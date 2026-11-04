@@ -125,6 +125,7 @@ If the current branch already has an open PR against `main`, stay on that branch
 
 - **Wait for an explicit go-ahead before committing or pushing any change, review fixes included.** Make the edit in the working tree and tell the user it's waiting locally. Run steps 4–6 and push only after they say "push it", "commit that", "ship it", or "go ahead". Every follow-up commit gets step 4's format check again (unless the config's `Format check:` is `none`), even a one-line review fix.
   - "Add this to the PR" says where the change goes; it isn't a go-ahead. A request that bundles both ("fix X and push it") is.
+  - For review fixes, the go-ahead comes before the edit: the user's answer to the calls in the [Claude review loop](#claude-review-loop)'s step 2 covers committing and pushing the fixes they agreed to.
   - The other exception is a fix for a failing CI check during a merge (see [Merging](#merging)).
 - **After each push:**
   - Wait for CI ([CI check](#ci-check)) and report the result. A failure here is reported to the user, not fixed automatically, except during a merge (see [Merging](#merging)).
@@ -178,7 +179,9 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
 
    **Clean → merge without waiting for confirmation** (green CI for the head still gates it; see [Merging](#merging)).
 
-2. **Evaluate each finding on its merits.** The reviewer can be wrong, can flag something already handled, or can clash with repository conventions; don't apply a suggestion just because it was made. Tell the user your call on each finding.
+2. **Evaluate each finding on its merits.** The reviewer can be wrong, can flag something already handled, or can clash with repository conventions; don't apply a suggestion just because it was made.
+
+   Recommend declining a finding that only shows up with input nobody is likely to send, such as an unusual phrasing of a command the code parses strictly on purpose. Fixing one tends to bring a narrower one in the next round. Its reply gives that reason, and it's resolved `WONT_FIX` (step 5).
 
    When a finding looks like something an earlier pass should have caught, read that round's execution log before calling it a reviewer miss. Each run uploads the 14-day artifact the config's `Usage limit:` line names (for the shared Claude review workflow, `claude-review-pr<PR>-<reviewed head>-attempt<run attempt>`), holding the reviewer's execution log (every tool call, plus the result block's `permission_denials` list and `total_cost_usd`), the check outputs and the diffs it read (`pr-diff/`). The artifact name is the handle: comment-triggered runs are listed under `main`, not the PR's branch, so filtering runs by branch misses them. List the repository's artifacts and keep the ones for that round's reviewed head (the full SHA from its summary's footer):
 
@@ -189,9 +192,11 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
 
    Each output line gives a workflow run id and the artifact name; download each one you need into its own new directory with the second command.
 
-   **Round limit.** From the PR's 4th summary on (counted as step 7 says), stop here once each finding is evaluated: summarize each round (findings, resolutions, what's still open), and ask the user, for each finding, with your call on it, to **proceed** (fix it, as steps 3–5 say, even where your call was to decline it; once the fix is pushed, step 7 requests one more review), **defer** (reply `Deferred to <where>: <why>` as step 4 says, resolve it `WONT_FIX`, and list it as a follow-up for the user), or **decline** (reply `Not changing this: <reason>`, and resolve it as step 5 says). Fix, reply to or resolve none of them until they answer.
+   Then list the findings for the user, each with your call (fix or decline) and a one-line reason, and wait for their answer before changing anything. They may change any call. Fixing every finding as it came has led to round after round of narrower findings on the same PR.
 
-3. **Fix the findings you agree with** in the working tree, then wait for the go-ahead to push ([Changes to an already-open PR](#changes-to-an-already-open-pr)).
+   **Round limit.** From the PR's 4th summary on (counted as step 7 says), the list also summarizes each round (findings, resolutions, what's still open), and asks the user, for each finding, with your call on it, to **proceed** (fix it, as steps 3–5 say, even where your call was to decline it; once the fix is pushed, step 7 requests one more review), **defer** (reply `Deferred to <where>: <why>` as step 4 says, resolve it `WONT_FIX`, and list it as a follow-up for the user), or **decline** (reply `Not changing this: <reason>`, and resolve it as step 5 says). Fix, reply to or resolve none of them until they answer.
+
+3. **Fix the findings the user agreed to fix**, and only those. Then commit and push them as [Changes to an already-open PR](#changes-to-an-already-open-pr) says, without asking again: their answer in step 2 was the go-ahead. If a fix turns out bigger than the call described, or changes code the finding didn't name, show it to the user and wait before pushing.
 4. **Reply to every finding in its own thread**, after its fix is pushed, never before. Never combine findings into one PR comment, and never leave one unanswered. The reply states the finding's outcome in one of three forms, the ones `/iwol:beads-pr` uses too (*Every thread gets a reply and a resolution* in `../beads-pr/SKILL.md`):
    - **Fixed:** `Fixed in <sha>: <what changed and why>`.
    - **Deferred** (only at step 2's round limit): `Deferred to <where>: <why it's left for later>`, where `<where>` names the follow-up: an issue or a PR when there is one, otherwise "a follow-up".
@@ -231,7 +236,7 @@ Only the reviewer the config names is part of this loop. Don't wait for, request
    ```
 
    - `ADDRESSED`: you fixed it (a `Fixed in` reply). Never use this reason when nothing changed.
-   - `WONT_FIX`: a valid point you're deliberately not acting on (out of scope, an accepted trade-off): a `Deferred to` reply, or a `Not changing this` reply to a valid point.
+   - `WONT_FIX`: a valid point you're deliberately not acting on (out of scope, an accepted trade-off, an unlikely edge case): a `Deferred to` reply, or a `Not changing this` reply to a valid point.
    - `INVALID` (shown as "Not an Issue"): it doesn't apply, or it's already handled (a `Not changing this` reply).
 
 6. **All findings declined, nothing pushed?** Once the user agrees with those calls, reply and resolve right away, then **end the loop without a re-review**. The reviewer would re-review the same commit and most likely repeat itself, and a clean pass on unchanged code proves nothing. Merging needs the user's explicit confirmation. A round with at least one pushed fix goes on to step 7.
