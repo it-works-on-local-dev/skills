@@ -68,9 +68,9 @@ Tell the user, from what Step 6 collected and without running another command:
   /iwol:start <branch>
   ```
 
-  To look at it or carry on by hand instead, the user switches to the branch in the main checkout. Give that in a `bash` block with the real branch:
+  To look at it or carry on by hand instead, the user switches to the branch in the main checkout. Give that in a `text` block too, with the real branch: a `bash` block's Run button would switch the session's own folder, not the main checkout.
 
-  ```bash
+  ```text
   git switch <branch>
   ```
 
