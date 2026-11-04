@@ -39,7 +39,7 @@ Moving the session into a worktree is the only way to work there. `cd` doesn't d
    - **It's there, and `git branch --list <branch>` shows the branch:** enter it as in 3. If `git status --short` lists nothing, apart from the untracked files the config's Files to leave alone section lists, switch it back with `git switch --no-guess <branch>`. Otherwise stop and show what it lists, and leave the branch as it is.
    - **It's there, but the branch doesn't exist here** (it merged and was deleted, and the worktree moved on to other work): don't switch, and don't create the branch again. Report the branch the worktree holds, and offer to enter it as it is.
    - **It's not there:** the skill creates it on the branch (*Creating one*, without `-b`), when the skill says to.
-5. If the branch is checked out in the main checkout or a folder outside `.claude/worktrees/`, or there's no `EnterWorktree` tool, don't move: stop, and tell the user to run the skill from that folder, giving the command they ran, in a `text` block.
+5. If the branch is checked out in the main checkout or a folder outside `.claude/worktrees/`, or there's no `EnterWorktree` tool, don't move: stop, and tell the user to run the skill from that folder, giving its slash command with the id, PR or branch this run resolved, in a `text` block.
 
 Git can't tell whether another session is still working in a worktree, and two sessions editing one folder overwrite each other's changes. Naming the folder before entering gives the user the chance to stop you.
 
