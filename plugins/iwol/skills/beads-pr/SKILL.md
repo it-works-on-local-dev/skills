@@ -58,7 +58,7 @@ Gather everything fresh:
 
 - The sub-epic and its child beads: status and comments (`bd show`, `bd children`, `bd comments <id>`), and each bead's files.
 - **Open findings**: `Finding` comments on the wave's beads with no later `Resolved <id>`, `Deferred <id>` or `Declined <id>` comment (see *Finding comments*).
-- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, giving the command in a `text` block, and ask whether to go on.
+- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, giving the command in a `text` block with the real id, and ask whether to go on.
 - **Re-test list**: steps named in `Re-test needed` comments on the sub-epic, plus steps the test plan marks `blocked` or `not run`. Leave out any step a later `Re-tested` comment covers.
 - The wave branch and working tree: current branch, uncommitted changes.
 - **Each bead's PR**, from the bead's external ref `gh-<n>`, set when its PR opens.
