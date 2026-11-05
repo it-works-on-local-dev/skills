@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.4.0](https://github.com/it-works-on-local-dev/skills/compare/v1.3.0...v1.4.0) (2026-11-04)
+
+
+### Features
+
+* add plan-digest, side-quest and the adhd output style ([#35](https://github.com/it-works-on-local-dev/skills/issues/35)) ([5f93004](https://github.com/it-works-on-local-dev/skills/commit/5f93004afb80bb87785973c9fd222d481cc36d15))
+* have /iwol:start do the work once its worktree is ready ([#37](https://github.com/it-works-on-local-dev/skills/issues/37)) ([89e3446](https://github.com/it-works-on-local-dev/skills/commit/89e34467dd9f3552aa3518b506c9cd42ea909796))
+* have beads-decompose-plan run its decomposition at xhigh effort ([#41](https://github.com/it-works-on-local-dev/skills/issues/41)) ([6564013](https://github.com/it-works-on-local-dev/skills/commit/6564013b37a5eb0e8af6f0989cac856ec54f8ff4))
+* have beads-implement dispatch through the Agent tool only ([#39](https://github.com/it-works-on-local-dev/skills/issues/39)) ([cf88227](https://github.com/it-works-on-local-dev/skills/commit/cf88227b5f6e97981e97c41dae498564e0bdb7b3))
+* offer the next command in a block with a Copy button ([#45](https://github.com/it-works-on-local-dev/skills/issues/45)) ([75639b2](https://github.com/it-works-on-local-dev/skills/commit/75639b2d8285bb6532449a23cb882c4d17219ce8))
+
+
+### Bug Fixes
+
+* ask before fixing review findings, and recommend declining unlikely edge cases ([#44](https://github.com/it-works-on-local-dev/skills/issues/44)) ([47077ba](https://github.com/it-works-on-local-dev/skills/commit/47077ba7fd60887ca9689583795a9da73557347b))
+* keep the desktop app's Auto-fix off on beads-pr and create-pr PRs ([#42](https://github.com/it-works-on-local-dev/skills/issues/42)) ([c76b4f8](https://github.com/it-works-on-local-dev/skills/commit/c76b4f8722b3523f140c2d5b9611c5998bfb8ad6))
+
 ## [1.3.0](https://github.com/it-works-on-local-dev/skills/compare/v1.2.1...v1.3.0) (2026-10-25)
 
 
