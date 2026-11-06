@@ -33,7 +33,7 @@ gh api --paginate orgs/<owner>/actions/runners --jq '.runners[] | select((<label
 
 ## Recovering the run
 
-Recover it per the documentation the config's `Recovering a stuck run:` line points to (if it says `none`, the steps here are all there is): cancel the run, then re-run all its jobs (`gh run rerun <run-id>`, not `--failed`) so a job that picks a runner, where the repository has one, runs again and can fall back to hosted runners. `--failed` would keep the runner it picked the first time, and the job would wait for it again.
+Recover it per the documentation the config's `Recovering a stuck run:` line points to (if it says `none`, the steps here are all there is): cancel the run, then re-run all its jobs (`gh run rerun <run-id>`, not `--failed`) so the job's runner is worked out again and can fall back to hosted runners: a job that picks a runner, where the repository has one, runs again, and a `runs-on` that reads a repository variable reads the variable's current value, so the re-run only helps once that variable names a hosted runner. With a picker job, `--failed` would keep the runner it picked the first time, and the job would wait for it again.
 
 - **A skill that waits** recovers the run as soon as the listings call for it, and waits for the re-run. If it's still stuck after that, it tells the user.
 - **A skill that reads once** recovers the run only with the user's OK, and reads the re-run on its next run.
