@@ -8,7 +8,7 @@ The two skills differ in one way that matters here: create-pr waits and polls, w
 
 ## The job's labels
 
-A gating job still `queued` may be waiting for one of the repository's own runners; the config's `Runs on:` line says how to tell. The run itself can show `in_progress`, because other jobs, such as a job that picks a runner, already ran. Take the job's labels from the queued job itself, where GitHub has already resolved its `runs-on` (the workflow file may hold only an expression, such as one reading a runner-picking job's output):
+A gating job still `queued` may be waiting for one of the repository's own runners; the config's `Runs on:` line says how to tell. The run itself can show `in_progress`, because other jobs, such as a job that picks a runner, already ran. Take the job's labels from the queued job itself, where GitHub has already resolved its `runs-on` (the workflow file may hold only an expression, such as one reading a repository variable or a runner-picking job's output):
 
 ```
 gh api --paginate repos/{owner}/{repo}/actions/runs/<run-id>/jobs --jq '.jobs[] | select(.status == "queued") | "\(.name) \(.labels | join(","))"'
