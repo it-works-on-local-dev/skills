@@ -379,7 +379,7 @@ Everything else waits for the user: open findings, an all-declined round, a stop
 
 ## Guardrails
 
-- **No direct pushes:** never force-push, push to `main`, or skip hooks (`--no-verify`). **With releases**, releases happen only by merging the release-please Release PR via `/iwol:create-release`.
+- **No direct pushes:** never force-push, push to `main`, or skip hooks (`--no-verify`). The one `--force-with-lease` the skill runs is clean-up's delete of the PR's own merged branch (step 4): the lease only adds the check that GitHub still has it at the merged head, so run it as written, and never drop the lease to make a refused delete go through. **With releases**, releases happen only by merging the release-please Release PR via `/iwol:create-release`.
 - **No stacked PRs:** every branch comes from `origin/main`, and every PR uses `--base main`.
   - When a PR's branch is deleted at merge (by `--delete-branch` or by GitHub), GitHub closes (not retargets) any PR based on that branch, and a closed PR can't be reopened.
   - Keep sequential work in one PR, or wait for the first PR to merge.
