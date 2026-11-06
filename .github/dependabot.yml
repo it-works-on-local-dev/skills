@@ -1,8 +1,8 @@
 # The CI and release workflows use actions at major tags (@v7), so minor and patch releases arrive
 # without a PR, and this opens one each week for any action whose next major version is out. The
-# review stub calls code-review's workflow at @main, so claude-code-action's pin lives there, not
-# here. None of these actions ship in the plugin, so the PRs keep Dependabot's chore(deps) titles
-# and cut no release.
+# review stub calls code-review's workflow at @v1, frozen at 1.2.1, so claude-code-action's pin
+# lives there, not here, and stays fixed until the stub moves to v2. None of these actions ship in
+# the plugin, so the PRs keep Dependabot's chore(deps) titles and cut no release.
 version: 2
 updates:
   - package-ecosystem: github-actions
