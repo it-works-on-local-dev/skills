@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/it-works-on-local-dev/skills/compare/v1.5.0...v1.6.0) (2026-11-06)
+
+
+### Features
+
+* support v2 of the code-review workflow, with Claude or Codex, while v1 stubs keep working ([#51](https://github.com/it-works-on-local-dev/skills/issues/51)) ([e300fa1](https://github.com/it-works-on-local-dev/skills/commit/e300fa1b735d4e16fa9137ce831c9f1a6f1a9a18))
+
+
+### Bug Fixes
+
+* merge in a separate call from the subject read, so a worktree session's guard allows it ([#50](https://github.com/it-works-on-local-dev/skills/issues/50)) ([5fdb387](https://github.com/it-works-on-local-dev/skills/commit/5fdb387efeb5e282def04e8a0e985b9da95c851b))
+
 ## [1.5.0](https://github.com/it-works-on-local-dev/skills/compare/v1.4.0...v1.5.0) (2026-11-06)
 
 
