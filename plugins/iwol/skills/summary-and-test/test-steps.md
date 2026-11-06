@@ -11,9 +11,16 @@ Write every step for someone using the app for the first time. The user may neve
 - **One numbered list per step, each action with its expected result.** Each item is a single action, followed on the next line by what the user should see after it, starting **Expect:**. Never put the actions in one list and the expected results in another: the user ends up going back and forth between the two lists and repeating actions.
 - **A concrete starting point** as the first item. For a web page, a link to it: resolve the actual dev server port from where `.claude/iwol-config.md` says ports are documented, never guess. If a change touches multiple apps, use each app's own port. For a mobile app, the device (simulator or emulator) and how to reach the starting screen from the app's first screen. A screen that can only be opened from a link, such as one a shared link or a dev link opens, starts with the deep-link command that opens it instead, one `bash` block per device, naming the screen it opens.
 - **Exact names for everything on screen.** Pages, screens, tabs, panels, sheets, cards, buttons, fields, menus and toggles get the label the user sees, in bold, and where it is when that isn't obvious (top right, at the bottom of the sheet, under **Members**). Take the labels from the code that renders them, not from how a bead, a PR or a commit describes them. Never use internal names in the instructions: components, files, routes, bead IDs. A route inside a deep-link command is fine.
-- **No shortcuts.** One action per item: every tap, every field, and the exact text to type, in backticks. Never write "as before", "same as step 3", "repeat for the others", "fill in the form", or "go to Settings" without saying how to get there. If the step starts on a screen an earlier step reached, give the way there again.
+- **No shortcuts.** One action per item: every tap, every field, and the exact text to type. Never write "as before", "same as step 3", "repeat for the others", "fill in the form", or "go to Settings" without saying how to get there. If the step starts on a screen an earlier step reached, give the way there again.
 - **Setup.** Do the setup you can do yourself (start a server, load data, run SQL) before sending the step, and say it's done. Record it in the plan when the skill saves one, so a later session can do it again. Setup only the user can do, such as signing in or opening a second browser window, comes first in the step as items of its own.
 - **Commands** each go in their own fenced code block tagged `bash`, so the user gets Run and Copy buttons: one command per block, no `$` prompt, no output inside. A slash command goes in a block tagged `text`, which gives Copy. Never give a command the user has to run only in backticks.
+- **Text to type** into the app under test goes in a fenced code block tagged `text`, nested under its item, so the user gets a Copy button. The action line ends in a colon and never repeats the value ("In the **Payee** field, type:"), and the **Expect:** line follows the block. Every value the user types or pastes gets a block, whatever its length: one value per block, the exact value and nothing else, never a placeholder, since Copy carries the whole block.
+  - **Not in a block:** an option picked from a list (its label, in bold), a key to press, a value only the screen can give (such as a one-time code), and text in an **Expect:** line, which the user reads and never pastes.
+  - **Typed by hand:** when the step checks the typing itself, the value stays in backticks and the step says to type it by hand, not paste it. A paste sends the whole value at once, so it skips what such a step checks: an input mask, validation or a counter that reacts to each key, suggestions that appear while typing, or a field that blocks paste.
+  - **Empty:** clearing a field stays an action in words ("Clear the **Payee** field"), with no block.
+  - **Several lines,** for a text area: one block holding the whole value.
+  - **Typed again** in a later step: the block again, as **No shortcuts** requires.
+  - **Spaces at the start or end:** never in the block, where they can't be seen. The block holds the visible text, and the spaces are key presses of their own ("paste this, then press Space twice").
 - **URLs** the user opens in a browser are always Markdown links, never in backticks. A URL that's part of a command stays in that command's `bash` block.
 - **Expected results** are concrete and observable: the exact text, value, screen or change, specific enough that a mismatch is unambiguous. Not a restatement of the acceptance criteria.
 
@@ -31,7 +38,10 @@ A step looks like this:
    **Expect:** the **<page title>** page, showing <what's on it>.
 3. Tap **<button label>** <where it is on the screen>.
    **Expect:** <what appears or changes, with its exact text>.
-4. In the **<field label>** field, type `<exact text>`.
+4. In the **<field label>** field, type:
+   ```text
+   <exact text>
+   ```
    **Expect:** <what the field shows>.
 5. Tap **<button label>** <where it is>.
    **Expect:** <the result>.
