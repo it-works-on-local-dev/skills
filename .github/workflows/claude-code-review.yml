@@ -10,7 +10,7 @@ jobs:
     name: Claude
     permissions:
       contents: read
-    uses: it-works-on-local-dev/code-review/.github/workflows/claude-code-review.yml@main
+    uses: it-works-on-local-dev/code-review/.github/workflows/claude-code-review.yml@v1
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
