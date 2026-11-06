@@ -279,13 +279,16 @@ On a yes, merge them one at a time:
 - After merging a PR, don't merge any other PR in this run whose bead has a `Waits for` comment naming the merged PR's bead. Its CI and review never ran with the prerequisite on `main`, so it goes through **Sync with main** first.
 - Before each merge, check again that the PR doesn't conflict with `main`. Stop at the first one that does; the next run syncs it.
 - Merge the way the config's `Merge method` says, pinned to the head you checked. Never use a rebase merge.
-  - `merge`: a merge commit, with the config's subject and body format. Never paste PR text, such as its title, into a shell string: backticks, `$VAR` and `$(…)` in it would be expanded. Fill `$SUBJECT` and `$BODY` with `gh pr view <n> --json title,number,headRefName --jq '<the format as a jq string>'`, taking the PR's fields from the JSON (`\(.title)`, `\(.number)`, `\(.headRefName)`), and pass them as `--subject "$SUBJECT" --body "$BODY"`. Run the reads and the merge in one Bash call, since variables don't carry over between calls, and chain them so the merge runs only if both reads succeeded and the subject isn't empty: `SUBJECT=$(…) && BODY=$(…) && [ -n "$SUBJECT" ] && gh pr merge …` (see the command list below). Otherwise a failed read leaves the subject empty, and GitHub falls back to its default subject, which lands on `main` for good.
-  - `squash`: a squash, with the subject the PR's title and number. Never paste the title into a shell string: backticks, `$VAR` and `$(…)` in it would be expanded, and the mangled subject would land on `main` for good. Read it into a variable in the same Bash call as the merge, which also reads it just before merging, and chain them so the merge runs only if the read succeeded and the subject isn't empty:
+  - **Read first, then merge, in separate calls.** Read the subject (and, under `merge`, the body) with `gh pr view` in a call of its own, then merge in the next call. Don't chain the read into the merge (`SUBJECT=$(…) && … && gh pr merge …`): in a worktree-isolated Claude Code session the guard refuses that chain. Never paste PR text, such as its title, into a shell string unquoted or inside double quotes: backticks, `$VAR` and `$(…)` in it would be expanded, and the mangled subject would land on `main` for good. The subject goes into the merge command in single quotes, copied exactly from what the read printed, with `'\''` for each apostrophe in it; the body goes in a file (`--body-file`), never on the command line. Merge only if every read succeeded and the subject isn't empty: if a read failed or the subject is empty, stop and report it, since GitHub would otherwise fall back to its default subject, or, under `merge`, land the commit with an empty body. `--match-head-commit` still pins the merge to the head you checked, whatever happened between the two calls.
+  - `merge`: a merge commit, with the config's subject and body format, written as jq strings over the PR's fields (`\(.title)`, `\(.number)`, `\(.headRefName)`). Read the subject with `gh pr view <n> --json title,number,headRefName --jq '<subject format>'`, which prints it; write the body straight to a file outside the worktree (`mktemp` prints one; use the path it printed) with `gh pr view <n> --json title,number,headRefName --jq '<body format>' > <file>`, so the body never passes through the shell; then merge with `--subject '<subject>' --body-file <file>` (see the command list below), only if both reads succeeded and the subject isn't empty. The redirect empties the file before `gh` runs, so a failed body read leaves it empty: never merge after one.
+  - `squash`: a squash, with the subject the PR's title and number, read just before merging:
 
     ```bash
-    SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
-      [ -n "$SUBJECT" ] &&
-      gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT" --body ""
+    # 1. Read the subject; it prints "<title> (#<n>)". Its own call
+    gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"'
+
+    # 2. Only if step 1 succeeded and printed a subject: merge, the subject single-quoted with '\'' for each apostrophe
+    gh pr merge <n> --squash --match-head-commit <full sha> --subject '<subject from step 1>' --body ""
     ```
 
     Setting the subject keeps the squash commit's subject the PR's title: for a one-commit PR, GitHub would otherwise take that commit's subject. `--body ""` leaves its body blank: otherwise the repository's squash settings can fill the body with the PR's commit messages or its description, which then land on `main` for good. Where release-please builds the changelog, that gives it exactly one entry per PR. Add `--delete-branch` only if the config says the skill deletes branches, not if it says GitHub deletes them on merge. gh's `--delete-branch` also force-deletes the local bead branch, so before passing it, check that the local branch, if it's still there, holds nothing beyond the head you checked: `git log <full sha>..<bead-branch>` prints nothing. If it prints commits, stop and show them.
@@ -455,6 +458,8 @@ The repair bead then goes through the **Fix round** and **Open the PRs** like an
 
 ## Commands that have worked on this repo
 
+Run `bd` and `gh` once per bead or PR, each as its own call (independent calls can go out together), with the IDs and numbers written into the command. Don't loop over them in the shell (`for n in $PRS; do gh …; done`) or feed one command's output into another through a variable: in a worktree-isolated Claude Code session the guard refuses both.
+
 ```bash
 # Review threads, with each thread's comments
 gh api graphql -F owner='{owner}' -F name='{repo}' -F n=<n> -f query='query($owner:String!,$name:String!,$n:Int!) { repository(owner:$owner, name:$name) { pullRequest(number:$n) { headRefOid mergeable reviewThreads(first:100) { nodes { id isResolved path line comments(first:20) { nodes { databaseId author { login } body createdAt } } } } } } }'
@@ -480,18 +485,18 @@ gh pr checks <n> --json name,state,bucket,link
 git switch <bead-branch> && git checkout <wave-branch> -- <file> <file>   # git rm any the bead deleted
 
 # Merge with a merge commit, pinned to the checked head (subject and body format from the config, written as jq strings
-# over the PR's fields, so no PR text goes through the shell). Run it as one chained Bash call: nothing merges if a read fails or the subject is empty
-SUBJECT=$(gh pr view <n> --json title,number,headRefName --jq '<subject format as a jq string>') &&
-  BODY=$(gh pr view <n> --json title,number,headRefName --jq '<body format as a jq string>') &&
-  [ -n "$SUBJECT" ] &&
-  gh pr merge <n> --merge --match-head-commit <full sha> --subject "$SUBJECT" --body "$BODY"
+# over the PR's fields). Each line is its own Bash call, never chained: a worktree-isolated session's guard refuses
+# SUBJECT=$(…) && gh pr merge …. Merge only if both reads succeeded and the subject isn't empty
+gh pr view <n> --json title,number,headRefName --jq '<subject format as a jq string>'
+gh pr view <n> --json title,number,headRefName --jq '<body format as a jq string>' > <file from mktemp, outside the worktree>
+gh pr merge <n> --merge --match-head-commit <full sha> --subject '<subject as printed, '\'' for each apostrophe>' --body-file <file>
 
 # Or squash, pinned to the checked head (Merge method: squash). Add --delete-branch only if the config says the skill deletes branches.
-# Run it as one chained Bash call: the title is read just before merging and never goes through the shell, and nothing merges if the read fails or the subject is empty.
+# Two calls: read the subject just before merging, then merge only if the read succeeded and printed a subject.
+# The subject goes in single quotes ('\'' for each apostrophe), never double quotes, so nothing in the title is expanded.
 # --body "" keeps the body blank: otherwise the repository's squash settings can fill it with the PR's commit messages or its description, which land on main for good
-SUBJECT=$(gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"') &&
-  [ -n "$SUBJECT" ] &&
-  gh pr merge <n> --squash --match-head-commit <full sha> --subject "$SUBJECT" --body ""
+gh pr view <n> --json title,number --jq '"\(.title) (#\(.number))"'
+gh pr merge <n> --squash --match-head-commit <full sha> --subject '<subject as printed>' --body ""
 
 # Under squash: does a bead branch hold anything beyond what merged? (must print nothing before deleting it)
 git log <headRefOid>..<bead-branch>
