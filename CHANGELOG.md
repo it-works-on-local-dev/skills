@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/it-works-on-local-dev/skills/compare/v1.4.0...v1.5.0) (2026-11-06)
+
+
+### Features
+
+* give the text to type in a test step a Copy button ([#46](https://github.com/it-works-on-local-dev/skills/issues/46)) ([73795c5](https://github.com/it-works-on-local-dev/skills/commit/73795c5ddc6db12c8ddd54ebfbd1c746d55184a9))
+
+
+### Bug Fixes
+
+* pin the Claude review stub to v1 after the workflow's rename ([#47](https://github.com/it-works-on-local-dev/skills/issues/47)) ([c401127](https://github.com/it-works-on-local-dev/skills/commit/c401127eeeb563003d4515c9ff6c46821c35ba51))
+
 ## [1.4.0](https://github.com/it-works-on-local-dev/skills/compare/v1.3.0...v1.4.0) (2026-11-04)
 
 
