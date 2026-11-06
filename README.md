@@ -51,15 +51,15 @@ The plugin then loads in place: an edit to a skill or agent in the clone is live
    This writes `.claude/settings.json`, which turns the plugin on for everyone who clones the repository and has the marketplace registered. Commit it. Keep `--scope project`: without it, the plugin is turned on in every project on your computer instead. Never add `extraKnownMarketplaces` to that file: the marketplace's source differs from computer to computer (GitHub on most, a local clone for someone developing the plugin).
 
 2. In Claude Code, in the repository, run `/iwol:setup`. It:
-   - asks which reviewer the repository's pull requests use: the public Claude review workflow (see [The review workflow](#the-review-workflow)), another review bot, or none;
+   - asks which reviewer the repository's pull requests use: the public review workflow, which reviews with Claude, Codex or both (see [The review workflow](#the-review-workflow)), another review bot, or none;
    - writes `.claude/iwol-config.md`, the file every iwol skill reads for the repository's checks, reviewer, CI, merge method and releases;
-   - writes the review workflow stub, when you chose the public Claude review workflow;
+   - writes the review workflow stub, when you chose the public review workflow;
    - reports what's still missing, such as `bd`, `gh`, the ignore rule for `.claude/worktrees/`, and the review workflow's secrets;
    - lists local copies of the plugin's skills and agents that the repository should delete, since the plugin now provides them.
 
    Run it again whenever the repository's checks, CI or reviewer change, to re-check the setup.
 
-A repository that has adopted the plugin holds only a settings file and a config file, plus a workflow stub when it uses the public Claude review workflow. Everything else comes from the plugin.
+A repository that has adopted the plugin holds only a settings file and a config file, plus a workflow stub when it uses the public review workflow. Everything else comes from the plugin.
 
 ## What the plugin ships
 
@@ -87,7 +87,7 @@ Model and Effort are the settings recommended for the session that runs the skil
 | `/iwol:create-pr` | Commits the session's changes and opens a PR against the base branch (draft by default), or pushes follow-up commits to the branch's open PR. Waits for CI, runs the Claude review loop, marks drafts ready, and merges and cleans up the branch the way the repository's config says. | `opus` | `high` |
 | `/iwol:summary-and-test` | The same as `/iwol:beads-summary-and-test` for changes that aren't a wave: summarises a branch or PR, checks it against the code, walks you through manual testing step by step, then fixes what failed and re-tests it. | `opus` | `high` |
 | `/iwol:create-release` | Cuts a production release by merging the Release PR that release-please keeps open, on your explicit go-ahead, after showing its version and changelog and checking new database migrations for destructive statements. Then watches the tag and the GitHub Release, watches the tag's deploy run when the config names a deploy workflow, and verifies production when the config names a version URL. For repositories whose config describes releases. | `opus` | `high` |
-| `/iwol:setup` | Sets up the plugin in a repository, or re-checks one that already uses it: writes `.claude/iwol-config.md`, enables the plugin in `.claude/settings.json`, writes the review workflow stub when the repository uses the public Claude review workflow, and reports what's missing and which local skill or agent copies to delete. | `sonnet` | `high` |
+| `/iwol:setup` | Sets up the plugin in a repository, or re-checks one that already uses it: writes `.claude/iwol-config.md`, enables the plugin in `.claude/settings.json`, writes the review workflow stub when the repository uses the public review workflow, and reports what's missing and which local skill or agent copies to delete. | `sonnet` | `high` |
 
 ### Session names
 
@@ -146,11 +146,11 @@ Versions follow semver, and the major number is a signal: a major release, from 
 
 The plugin's PR skills read the reviews on a pull request and act on them. They work with any of three set-ups, which `/iwol:setup` asks about:
 
-- the public Claude review workflow in [`it-works-on-local-dev/code-review`](https://github.com/it-works-on-local-dev/code-review);
+- the public review workflow in [`it-works-on-local-dev/code-review`](https://github.com/it-works-on-local-dev/code-review), with Claude, Codex or both as the engine;
 - another review bot;
 - no reviewer.
 
-The workflow's own README covers calling it, creating the GitHub App it posts as, and its versioning: its v1 tag moves only to compatible releases. You don't need to write the calling workflow yourself: `/iwol:setup` writes the stub for you when you choose this reviewer.
+The workflow's own README covers calling it, creating the GitHub App it posts as, the Codex credentials, and its versioning. You don't need to write the calling workflow yourself: `/iwol:setup` writes the stub for you when you choose this reviewer, as `.github/workflows/code-review.yml` calling `code-review.yml@v2`, the tag that moves to each compatible 2.x release. A repository whose stub still calls `claude-code-review.yml@v1`, frozen at 1.2.1 with Claude as its only engine, keeps working: the PR skills read both versions' signals, and `/iwol:setup` offers to move the stub to v2 when it re-checks the repository.
 
 ## Checks this repository runs on itself
 
