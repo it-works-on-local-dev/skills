@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/it-works-on-local-dev/skills/compare/v1.6.0...v1.7.0) (2026-11-07)
+
+
+### Features
+
+* have setup pass the review's runner from a repository variable ([#49](https://github.com/it-works-on-local-dev/skills/issues/49)) ([9e4e1be](https://github.com/it-works-on-local-dev/skills/commit/9e4e1be8af81a62bbb3bfba488ba96489b36078a))
+
 ## [1.6.0](https://github.com/it-works-on-local-dev/skills/compare/v1.5.0...v1.6.0) (2026-11-06)
 
 
