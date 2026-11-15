@@ -15,7 +15,7 @@ Plans may touch backend, infrastructure, data, cloud, networking, CI/CD, or othe
 
 "The plan we just built" means the plan produced earlier in this session, normally by `/iwol:grill-me`. Look for it in this order, and do not ask the user to paste it:
 
-1. The file `/iwol:grill-me` wrote in this session, `plans/<slug>.md`, whose path it named.
+1. The file `/iwol:grill-me` wrote in this session, `<main checkout>/plans/<slug>.md` (`<main checkout>` as `../start/worktrees.md` defines it), whose absolute path it named. Read and edit it at that path: in a worktree session, a bare `plans/<slug>.md` points into the worktree, not at the file the hand-off builds.
 2. A file the user points at, such as `docs/rfc.md`, wherever it is.
 3. Failing both, the plan in the conversation.
 

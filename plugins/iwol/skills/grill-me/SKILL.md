@@ -24,7 +24,7 @@ If a question can be answered by exploring the codebase, explore the codebase in
   - **Out of scope:** what is deliberately not being done.
   - **Open questions:** the questions that must go to someone else, each naming who must answer it. "None" when nothing was routed.
 
-  If a file of that name already holds another plan, add a word to the slug; if it holds this plan from an earlier grilling, update it. Name the file's path, then offer the next step, in this same session, as a lead-in line and the command in a `text` block:
+  If a file of that name already holds another plan, add a word to the slug; if it holds this plan from an earlier grilling, update it. Name the file's absolute path, then offer the next step, in this same session, as a lead-in line and the command in a `text` block:
 
   ```text
   /iwol:plan-digest
