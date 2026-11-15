@@ -58,7 +58,7 @@ Gather everything fresh:
 
 - The sub-epic and its child beads: status and comments (`bd show`, `bd children`, `bd comments <id>`), and each bead's files.
 - **Open findings**: `Finding` comments on the wave's beads with no later `Resolved <id>`, `Deferred <id>` or `Declined <id>` comment (see *Finding comments*).
-- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, giving the command in a `text` block with the real id, and ask whether to go on.
+- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` or `Finding [manual test, step <step>]` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, giving the command in a `text` block with the real id, and ask whether to go on.
 - **Re-test list**: steps named in `Re-test needed` comments on the sub-epic, plus steps the test plan marks `blocked` or `not run`. Leave out any step a later `Re-tested` comment covers.
 - The wave branch and working tree: current branch, uncommitted changes.
 - **Each bead's PR**, from the bead's external ref `gh-<n>`, set when its PR opens.
@@ -219,7 +219,7 @@ Never send a re-test step as a title alone or as a question card. Write it out i
 6. If the list runs to more than about 10 steps, split it into groups of related steps the way `test-steps.md` splits a long test, and re-test one group per run.
 
 - All pass: add a `Re-tested <date>: steps <list> pass` comment on the sub-epic. If steps are left in other groups, end the run; the next run, in a new session, re-tests the next group. Otherwise carry on.
-- Any fail: add a `Finding` comment for it on the step's bead, reopen the bead, and end the run. The next run starts with a fix round.
+- Any fail: add a `Finding` comment for each fail on the step's bead, and reopen the bead. If any steps in this run passed, also add a `Re-tested <date>: steps <list> pass` comment on the sub-epic for them, so the re-test list leaves them out until a later fix touches them. Then end the run. The next run starts with a fix round.
 
 ## Stage — Open the PRs
 
