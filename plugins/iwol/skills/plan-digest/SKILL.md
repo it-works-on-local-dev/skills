@@ -13,7 +13,13 @@ Plans may touch backend, infrastructure, data, cloud, networking, CI/CD, or othe
 
 ## Find and verify the plan
 
-"The plan we just built" means the plan produced earlier in this session, normally by `/iwol:grill-me`. Locate it from the conversation; do not ask the user to paste it.
+"The plan we just built" means the plan produced earlier in this session, normally by `/iwol:grill-me`. Look for it in this order, and do not ask the user to paste it:
+
+1. The file `/iwol:grill-me` wrote in this session, `plans/<slug>.md`, whose path it named.
+2. A file the user points at, such as `docs/rfc.md`, wherever it is.
+3. Failing both, the plan in the conversation.
+
+When the plan is in a file, read the file and verify the digest against it, not against the conversation: the file is what gets built.
 
 If the plan references files, branches, wiki pages, linked docs, configs, or APIs, inspect what is accessible before summarising.
 
@@ -23,7 +29,7 @@ If genuinely no plan-shaped artefact exists in context, say so in one line and s
 
 ## Output budget
 
-Target **150–300 words** total. Hard cap: **25 lines excluding headings**.
+Target **150–300 words** total. Hard cap: **25 lines excluding headings and the next-command hand-off** (see *Next command*).
 
 If the plan is large, compress harder rather than exceeding the cap. Prioritise the decisions and risks that affect correctness, reversibility, users, data, security, or other systems.
 
@@ -81,7 +87,7 @@ If the plan has no verification strategy, flag that explicitly. Do not assume a 
 
 ### 6. Still open
 
-`/iwol:grill-me` ends with two lists: the decisions reached, and the questions it routed to someone else (a stakeholder, an architect) because neither the user nor Claude could answer them. List each routed question here as an open item, naming who has to answer it. Do not invent an answer for it: grilling already said nobody in the conversation can. A routed question that affects correctness, reversibility, users, data, security or another system pushes the verdict to "inspect <that question> first".
+`/iwol:grill-me` ends with two lists: the decisions reached, and the questions it routed to someone else (a stakeholder, an architect) because neither the user nor Claude could answer them. It writes the routed questions to the plan file's Open questions section, so read them from there; when there is no plan file, fall back to grill-me's list in the conversation. List each routed question here as an open item, naming who has to answer it. Do not invent an answer for it: grilling already said nobody in the conversation can. A routed question that affects correctness, reversibility, users, data, security or another system pushes the verdict to "inspect <that question> first".
 
 Apart from those, this section should be **empty** for a plan `/iwol:grill-me` worked on in this session, because grilling should have resolved every material fork. If a fork that neither list covers genuinely remains unresolved, put this warning at the very top of the digest:
 
@@ -103,8 +109,32 @@ In either case, do not force an unresolved question into "Decisions locked in" o
 
 ## Verdict
 
-End with exactly one line in this format:
+End the digest with exactly one line in this format:
 
 **Size:** trivial / contained / significant / sprawling · **Risk:** low / medium / high · **Recommendation:** approve as-is / inspect <specific thing> first / do not approve yet
 
 Approve as-is only if the outcome, blast radius, risks, and verification approach are clear and acceptable for the size of the change. Otherwise name the single most important thing for the user to inspect before approving.
+
+## Next command
+
+The verdict line is the digest's last line. Only "approve as-is" is followed by a hand-off, outside the 25-line cap: the next command, to run in a new session started in the main checkout, with the plan file's path in it, so the builder works from the approved file rather than from a conversation that also holds every option turned down.
+
+"Inspect <thing> first" and "do not approve yet" end with the verdict line alone: the verdict already names what to look at, and a Copy button under a warning invites pasting past it. When the user later says the flagged item is settled, edit the plan file to match first, then give the command as below.
+
+**Pick the route.** Use the one the plan's *How it ships* section states. If the plan doesn't state one, pick by your Size rating: trivial or contained goes to `/iwol:start`, significant or sprawling to `/iwol:beads-decompose-plan`. Then say in the lead-in that you picked by size, and name the other route in prose after the block. Give one block, never both.
+
+**Give the command** as the lead-in "Next, in a new session started in the main checkout:" and the command in a `text` block with the real path. For one PR:
+
+```text
+/iwol:start plans/<slug>.md
+```
+
+For waves of beads:
+
+```text
+/iwol:beads-decompose-plan plans/<slug>.md
+```
+
+A plan file the user pointed at elsewhere, such as `docs/rfc.md`, is used as it is, with its own path in the command.
+
+**No plan file.** When the approved plan exists only in the conversation, give no block. Say in one line that the plan isn't in a file, and offer to save it to `plans/<slug>.md` in grill-me's shape: the seven sections its *How to ask* lists, in `../grill-me/SKILL.md`. Never write it without a yes. On a yes, write it, with "the plan does not specify" in any section the plan doesn't fill, then give the command as above.

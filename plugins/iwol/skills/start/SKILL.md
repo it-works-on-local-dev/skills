@@ -1,6 +1,6 @@
 ---
 name: start
-description: 'Start work that isn''t a Beads wave in its own named git worktree: work out the branch name `<prefix>/<description>` the way /iwol:create-pr names PR branches, create `.claude/worktrees/<prefix>-<description>` on that branch from the base branch, prepare it the way the repository''s iwol config says, move the session into it, then do the work there and stop at checked, uncommitted changes; when the user asked only for the worktree, it stops there. Given the name of a worktree that already exists, it moves the session back into it and waits. Use when the user runs /iwol:start <description>, or asks to "start work on …", "start a named worktree for …", "set up a worktree for this fix", or "go back to the worktree for …". It replaces the random worktree names the Claude desktop app gives its sessions. For a Beads wave, /iwol:beads-implement makes the wave''s worktree itself.'
+description: 'Start work that isn''t a Beads wave in its own named git worktree: work out the branch name `<prefix>/<description>` the way /iwol:create-pr names PR branches, create `.claude/worktrees/<prefix>-<description>` on that branch from the base branch, prepare it the way the repository''s iwol config says, move the session into it, then do the work there and stop at checked, uncommitted changes; when the user asked only for the worktree, it stops there. Given the name of a worktree that already exists, it moves the session back into it and waits. Use when the user runs /iwol:start <description> or /iwol:start <plan file>, or asks to "start work on …", "start a named worktree for …", "set up a worktree for this fix", or "go back to the worktree for …". It replaces the random worktree names the Claude desktop app gives its sessions. For a Beads wave, /iwol:beads-implement makes the wave''s worktree itself.'
 ---
 
 # /iwol:start
@@ -15,13 +15,14 @@ Read `worktrees.md`, next to this file, before Step 1. It holds the naming rule 
 
 ## Step 1 — Work out the names
 
-The args are a description of the work in words, or a ready-made branch name `<prefix>/<description>`.
+The args are a description of the work in words, a ready-made branch name `<prefix>/<description>`, or a path to a plan file, such as the `plans/<slug>.md` that `/iwol:grill-me` writes.
 
 - **No args:** ask what the work is, and list the worktrees already under `.claude/worktrees/` (`git worktree list`) in case the user wants one of those. Then wait.
 - **A branch name** whose prefix is one of `/iwol:create-pr`'s (see *Branch and commit naming* in `../create-pr/SKILL.md`): use it, with its description put through the `<description>` rule in `worktrees.md` (so `fix/Date_Range` becomes `fix/date-range`).
 - **Words:** pick the prefix from that table by what the work is; anything that doesn't clearly fit is `chore`, so don't ask. Shorten the words to a description of a few words, dropping filler such as "the", "a" and "some", then apply the `<description>` rule. "fix the transaction filter's date range" becomes `fix/transaction-filter-date-range`.
+- **A plan file** (args that are a path to a file that exists): read it in full now, before Step 3 moves the session, and keep its contents in context. It's usually untracked in the main checkout, so it doesn't exist in the worktree. Work out the names from its title as for words.
 
-The worktree is `.claude/worktrees/<prefix>-<description>`. State the branch and the worktree in one line before creating anything, so the user can correct them. For names worked out from words, wait for a yes: Step 4 starts editing straight after setup, and renaming a branch and moving a worktree with changes in it, with the session inside, isn't cheap. A ready-made branch name needs no yes.
+The worktree is `.claude/worktrees/<prefix>-<description>`. State the branch and the worktree in one line before creating anything, so the user can correct them. For names worked out from words or a plan file's title, wait for a yes: Step 4 starts editing straight after setup, and renaming a branch and moving a worktree with changes in it, with the session inside, isn't cheap. A ready-made branch name needs no yes.
 
 ## Step 2 — Resume, or check the names are free
 
@@ -45,7 +46,7 @@ Run `git fetch origin`, then check in this order:
 
 If the user asked only for a worktree, such as "set up a worktree for this fix", or to plan or look around in it first, skip this step: report (Step 5) and wait.
 
-Otherwise, do the work in the worktree. What to build comes from the args and from anything this conversation already holds about it, such as a plan, a plan file or earlier messages. If that isn't enough to start on, such as "rework auth" with nothing else, ask what the work should do and wait; the worktree is ready, so the answer goes straight into it. Don't ask about details the code can settle.
+Otherwise, do the work in the worktree. When the args named a plan file, what to build is what that file says. Otherwise it comes from the args and from anything this conversation already holds about it, such as a plan, a plan file or earlier messages. If that isn't enough to start on, such as "rework auth" with nothing else, ask what the work should do and wait; the worktree is ready, so the answer goes straight into it. Don't ask about details the code can settle.
 
 - Keep to what was asked. Work found along the way that's outside it goes in the report, not in this change.
 - When it's done, run the narrowest checks that cover what changed, per the config's Checks section, and fix what they turn up. The full check runs in CI once `/iwol:create-pr` pushes the branch.
