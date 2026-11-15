@@ -1,11 +1,11 @@
 ---
 name: plan-digest
-description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before /iwol:beads-decompose-plan turns it into beads. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:plan-digest the plan we just built".
+description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before the plan is built, by /iwol:beads-decompose-plan as beads or by /iwol:start as one PR. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:plan-digest the plan we just built".
 ---
 
 # /iwol:plan-digest
 
-Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan usually goes on to `/iwol:beads-decompose-plan`, so the digest is the go/no-go before decomposing.
+Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan then goes on to `/iwol:beads-decompose-plan` (waves of beads) or `/iwol:start` (one PR), so the digest is the go/no-go before building.
 
 Order by importance, most load-bearing first. Assume the user reads top-to-bottom and stops the moment they are satisfied.
 
@@ -13,7 +13,13 @@ Plans may touch backend, infrastructure, data, cloud, networking, CI/CD, or othe
 
 ## Find and verify the plan
 
-"The plan we just built" means the plan produced earlier in this session, normally by `/iwol:grill-me`. Locate it from the conversation; do not ask the user to paste it.
+"The plan we just built" means the plan produced earlier in this session, normally by `/iwol:grill-me`. Look for it in this order, and do not ask the user to paste it:
+
+1. The file `/iwol:grill-me` wrote in this session, `<main checkout>/plans/<slug>.md` (`<main checkout>` as `../start/worktrees.md` defines it), whose absolute path it named. Read and edit it at that path: in a worktree session, a bare `plans/<slug>.md` points into the worktree, not at the file the hand-off builds.
+2. A file the user points at, such as `docs/rfc.md`, wherever it is.
+3. Failing both, the plan in the conversation.
+
+When the plan is in a file, read the file and verify the digest against it, not against the conversation: the file is what gets built.
 
 If the plan references files, branches, wiki pages, linked docs, configs, or APIs, inspect what is accessible before summarising.
 
@@ -23,7 +29,7 @@ If genuinely no plan-shaped artefact exists in context, say so in one line and s
 
 ## Output budget
 
-Target **150–300 words** total. Hard cap: **25 lines excluding headings**.
+Target **150–300 words** total. Hard cap: **25 lines excluding headings and the next-command hand-off** (see *Next command*).
 
 If the plan is large, compress harder rather than exceeding the cap. Prioritise the decisions and risks that affect correctness, reversibility, users, data, security, or other systems.
 
@@ -81,7 +87,7 @@ If the plan has no verification strategy, flag that explicitly. Do not assume a 
 
 ### 6. Still open
 
-`/iwol:grill-me` ends with two lists: the decisions reached, and the questions it routed to someone else (a stakeholder, an architect) because neither the user nor Claude could answer them. List each routed question here as an open item, naming who has to answer it. Do not invent an answer for it: grilling already said nobody in the conversation can. A routed question that affects correctness, reversibility, users, data, security or another system pushes the verdict to "inspect <that question> first".
+`/iwol:grill-me` ends with two lists: the decisions reached, and the questions it routed to someone else (a stakeholder, an architect) because neither the user nor Claude could answer them. It writes the routed questions to the plan file's Open questions section, so read them from there; when there is no plan file, fall back to grill-me's list in the conversation. List each routed question here as an open item, naming who has to answer it. Do not invent an answer for it: grilling already said nobody in the conversation can. A routed question that affects correctness, reversibility, users, data, security or another system pushes the verdict to "inspect <that question> first".
 
 Apart from those, this section should be **empty** for a plan `/iwol:grill-me` worked on in this session, because grilling should have resolved every material fork. If a fork that neither list covers genuinely remains unresolved, put this warning at the very top of the digest:
 
@@ -103,8 +109,32 @@ In either case, do not force an unresolved question into "Decisions locked in" o
 
 ## Verdict
 
-End with exactly one line in this format:
+End the digest with exactly one line in this format:
 
 **Size:** trivial / contained / significant / sprawling · **Risk:** low / medium / high · **Recommendation:** approve as-is / inspect <specific thing> first / do not approve yet
 
 Approve as-is only if the outcome, blast radius, risks, and verification approach are clear and acceptable for the size of the change. Otherwise name the single most important thing for the user to inspect before approving.
+
+## Next command
+
+The verdict line is the digest's last line. Only "approve as-is" is followed by a hand-off, outside the 25-line cap: the next command, to run in a new session started in the main checkout, with the plan file's path in it, so the builder works from the approved file rather than from a conversation that also holds every option turned down.
+
+"Inspect <thing> first" and "do not approve yet" end with the verdict line alone: the verdict already names what to look at, and a Copy button under a warning invites pasting past it. When the user later says the flagged item is settled, edit the plan file to match, asking first when it's a file `/iwol:grill-me` didn't write, such as one the user pointed at. Then re-check the plan and give a new verdict line: settling the item the verdict named doesn't make the plan approvable by itself. Give the command as below only if the new verdict is "approve as-is".
+
+**Pick the route.** Use the one the plan's *How it ships* section states. If the plan doesn't state one, pick by your Size rating: trivial or contained goes to `/iwol:start`, significant or sprawling to `/iwol:beads-decompose-plan`. Then say in the lead-in that you picked by size, and name the other route in prose after the block. Give one block, never both.
+
+**Give the command** as the lead-in "Next, in a new session started in the main checkout:" and the command in a `text` block with the real path. For one PR:
+
+```text
+/iwol:start plans/<slug>.md
+```
+
+For waves of beads:
+
+```text
+/iwol:beads-decompose-plan plans/<slug>.md
+```
+
+A plan file the user pointed at elsewhere, such as `docs/rfc.md`, is used as it is, with its own path in the command. When this session isn't in the main checkout (the two absolute paths `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints differ), give that file's absolute path instead: the command runs in a new session in the main checkout, where a relative path names a different copy of the file, or none.
+
+**No plan file.** When the approved plan exists only in the conversation, give no block. Say in one line that the plan isn't in a file, and offer to save it to `plans/<slug>.md` in the main checkout, where grill-me writes it, in grill-me's shape: the seven sections its *How to ask* lists, in `../grill-me/SKILL.md`. Never write it without a yes. On a yes, write it, with "the plan does not specify" in any section the plan doesn't fill, then give the command as above.
