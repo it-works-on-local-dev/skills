@@ -135,6 +135,6 @@ For waves of beads:
 /iwol:beads-decompose-plan plans/<slug>.md
 ```
 
-A plan file the user pointed at elsewhere, such as `docs/rfc.md`, is used as it is, with its own path in the command.
+A plan file the user pointed at elsewhere, such as `docs/rfc.md`, is used as it is, with its own path in the command. When this session isn't in the main checkout (the two absolute paths `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints differ), give that file's absolute path instead: the command runs in a new session in the main checkout, where a relative path names a different copy of the file, or none.
 
 **No plan file.** When the approved plan exists only in the conversation, give no block. Say in one line that the plan isn't in a file, and offer to save it to `plans/<slug>.md` in the main checkout, where grill-me writes it, in grill-me's shape: the seven sections its *How to ask* lists, in `../grill-me/SKILL.md`. Never write it without a yes. On a yes, write it, with "the plan does not specify" in any section the plan doesn't fill, then give the command as above.
