@@ -212,9 +212,9 @@ Never send a re-test step as a title alone or as a question card. Write it out i
 2. Take each step's line from the latest `Manual test plan` comment. The comment keeps only one line per step.
 3. Before sending a step, do the setup its line records (`setup …`). If the step relies on something earlier steps in its group created, such as data the user added, and it's gone (for example after a database reset), recreate it first: yourself with SQL or seed data where you can, or by walking the user through those earlier steps again.
 4. Check the step against the code as it now is. Fix rounds change screens, labels and flows, so take the labels from the current code, not from the plan's line.
-5. Send the step written out in full by `test-steps.md`, one step per message, ending with its closing line, and wait for the user's reply. Label it with its place in this run and the plan's own step number, such as `Re-test 1 of 3 — Step 2.3 — <title>`. Before its numbered list, one line on why it's back:
-   - `Failed last time: <the finding's one-line summary>.` for a step the plan marks failed, or that failed an earlier re-test.
-   - `Passed before; re-testing after the fix for: <the finding's one-line summary>.` for a step that passed and is back only because a fix touched it.
+5. Send the step written out in full by `test-steps.md`, one step per message, ending with its closing line, and wait for the user's reply. Label it with its place in this run and the plan's own step number, such as `Re-test 1 of 3 — Step 2.3 — <title>`. Before its numbered list, one line on why it's back, chosen by the step's latest result. The plan's mark alone can be stale: this stage records results only in comments, so a later `Re-tested` pass or `Finding [manual test, step <step>]` comment takes its place.
+   - `Failed last time: <the finding's one-line summary>.` when the latest result is a fail: the plan marks it failed and no later `Re-tested` pass covers it, or a `Finding [manual test, step <step>]` comment came after its latest pass.
+   - `Passed before; re-testing after the fix for: <the finding's one-line summary>.` when the latest result is a pass, and the step is back only because a fix touched it: the plan marks it passed, or a `Re-tested` pass covers it after its latest failure.
    - `Not run before.` for a step that was blocked or not run.
 6. If the list runs to more than about 10 steps, split it into groups of related steps the way `test-steps.md` splits a long test, and re-test one group per run.
 
