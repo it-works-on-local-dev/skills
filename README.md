@@ -6,7 +6,7 @@ The `iwol` plugin for [Claude Code](https://claude.com/claude-code), and the mar
 
 - **The `iwol` plugin** (`plugins/iwol/`) gives Claude Code a way of working from plan to release:
   - the beads workflow, which turns a plan into work items and runs them through parallel sub-agents, manual testing and one pull request per item: `/iwol:beads-decompose-plan`, `/iwol:beads-implement`, `/iwol:beads-summary-and-test` and `/iwol:beads-pr`;
-  - `/iwol:grill-me`, which stress-tests a plan or design before you build it, and `/iwol:plan-digest`, which boils the plan down to a one-minute go/no-go before you decompose it;
+  - `/iwol:grill-me`, which stress-tests a plan or design before you build it, and `/iwol:plan-digest`, which boils the plan down to a one-minute go/no-go before you build it, as beads or as one PR;
   - the PR and release flows for everything else: `/iwol:start`, `/iwol:create-pr`, `/iwol:summary-and-test` and `/iwol:create-release`;
   - `/iwol:side-quest`, which does one task, a bead or a prompt, in a worktree of its own and leaves it committed on a local branch;
   - `/iwol:setup`, which adopts the plugin in a repository;

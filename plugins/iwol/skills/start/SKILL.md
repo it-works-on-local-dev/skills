@@ -17,6 +17,8 @@ Read `worktrees.md`, next to this file, before Step 1. It holds the naming rule 
 
 The args are a description of the work in words, a ready-made branch name `<prefix>/<description>`, or a path to a plan file, such as the `plans/<slug>.md` that `/iwol:grill-me` writes.
 
+Check for a file first: args that are a path to a file that exists are a plan file, even when they also look like a branch name (`docs/rfc.md` starts with the `docs` prefix).
+
 - **No args:** ask what the work is, and list the worktrees already under `.claude/worktrees/` (`git worktree list`) in case the user wants one of those. Then wait.
 - **A branch name** whose prefix is one of `/iwol:create-pr`'s (see *Branch and commit naming* in `../create-pr/SKILL.md`): use it, with its description put through the `<description>` rule in `worktrees.md` (so `fix/Date_Range` becomes `fix/date-range`).
 - **Words:** pick the prefix from that table by what the work is; anything that doesn't clearly fit is `chore`, so don't ask. Shorten the words to a description of a few words, dropping filler such as "the", "a" and "some", then apply the `<description>` rule. "fix the transaction filter's date range" becomes `fix/transaction-filter-date-range`.

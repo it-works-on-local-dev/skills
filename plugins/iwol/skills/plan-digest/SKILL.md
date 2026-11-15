@@ -1,11 +1,11 @@
 ---
 name: plan-digest
-description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before /iwol:beads-decompose-plan turns it into beads. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:plan-digest the plan we just built".
+description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before the plan is built, by /iwol:beads-decompose-plan as beads or by /iwol:start as one PR. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:plan-digest the plan we just built".
 ---
 
 # /iwol:plan-digest
 
-Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan usually goes on to `/iwol:beads-decompose-plan`, so the digest is the go/no-go before decomposing.
+Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan then goes on to `/iwol:beads-decompose-plan` (waves of beads) or `/iwol:start` (one PR), so the digest is the go/no-go before building.
 
 Order by importance, most load-bearing first. Assume the user reads top-to-bottom and stops the moment they are satisfied.
 
@@ -119,7 +119,7 @@ Approve as-is only if the outcome, blast radius, risks, and verification approac
 
 The verdict line is the digest's last line. Only "approve as-is" is followed by a hand-off, outside the 25-line cap: the next command, to run in a new session started in the main checkout, with the plan file's path in it, so the builder works from the approved file rather than from a conversation that also holds every option turned down.
 
-"Inspect <thing> first" and "do not approve yet" end with the verdict line alone: the verdict already names what to look at, and a Copy button under a warning invites pasting past it. When the user later says the flagged item is settled, edit the plan file to match first, then give the command as below.
+"Inspect <thing> first" and "do not approve yet" end with the verdict line alone: the verdict already names what to look at, and a Copy button under a warning invites pasting past it. When the user later says the flagged item is settled, edit the plan file to match, asking first when it's a file `/iwol:grill-me` didn't write, such as one the user pointed at. Then re-check the plan and give a new verdict line: settling the item the verdict named doesn't make the plan approvable by itself. Give the command as below only if the new verdict is "approve as-is".
 
 **Pick the route.** Use the one the plan's *How it ships* section states. If the plan doesn't state one, pick by your Size rating: trivial or contained goes to `/iwol:start`, significant or sprawling to `/iwol:beads-decompose-plan`. Then say in the lead-in that you picked by size, and name the other route in prose after the block. Give one block, never both.
 
@@ -137,4 +137,4 @@ For waves of beads:
 
 A plan file the user pointed at elsewhere, such as `docs/rfc.md`, is used as it is, with its own path in the command.
 
-**No plan file.** When the approved plan exists only in the conversation, give no block. Say in one line that the plan isn't in a file, and offer to save it to `plans/<slug>.md` in grill-me's shape: the seven sections its *How to ask* lists, in `../grill-me/SKILL.md`. Never write it without a yes. On a yes, write it, with "the plan does not specify" in any section the plan doesn't fill, then give the command as above.
+**No plan file.** When the approved plan exists only in the conversation, give no block. Say in one line that the plan isn't in a file, and offer to save it to `plans/<slug>.md` in the main checkout, where grill-me writes it, in grill-me's shape: the seven sections its *How to ask* lists, in `../grill-me/SKILL.md`. Never write it without a yes. On a yes, write it, with "the plan does not specify" in any section the plan doesn't fill, then give the command as above.
