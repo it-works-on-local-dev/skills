@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.8.0](https://github.com/it-works-on-local-dev/skills/compare/v1.7.0...v1.8.0) (2026-11-15)
+
+
+### Features
+
+* have plan-digest end with the next command, from a plan file grill-me writes ([#59](https://github.com/it-works-on-local-dev/skills/issues/59)) ([46e71a8](https://github.com/it-works-on-local-dev/skills/commit/46e71a816a2c09c7267125dc9373f9fe97206fcc))
+
+
+### Bug Fixes
+
+* keep manual re-test results current in the plan ([#57](https://github.com/it-works-on-local-dev/skills/issues/57)) ([0ac6d3b](https://github.com/it-works-on-local-dev/skills/commit/0ac6d3be4e3f7d48238a1c22428706f494eaa723))
+* write out every test step, re-tests included, and take pass or fail as a typed reply ([#55](https://github.com/it-works-on-local-dev/skills/issues/55)) ([88dd6aa](https://github.com/it-works-on-local-dev/skills/commit/88dd6aa5a5e573580bed4c870138fb8f92310266))
+
 ## [1.7.0](https://github.com/it-works-on-local-dev/skills/compare/v1.6.0...v1.7.0) (2026-11-07)
 
 
