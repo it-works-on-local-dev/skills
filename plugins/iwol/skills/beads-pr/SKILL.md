@@ -204,7 +204,19 @@ After replying, read the threads again and confirm that every one is resolved an
 
 ## Stage — Re-test (before opening the PRs, and before merging)
 
-If the re-test list isn't empty, run it on the wave branch, kept current, because a step can depend on more than one bead. The list covers steps the fixes touched, and steps that were blocked or not run during testing. Walk the user through those steps exactly as `/iwol:beads-summary-and-test` does. Take each step from the `Manual test plan` comment, send one at a time labelled `Re-test 1 of 3 — <title>`, and wait for pass or fail. Before sending each step, do the setup its line records (`setup …`). If the step relies on something earlier steps in its group created, such as data the user added, and it's gone (for example after a database reset), recreate it first: yourself with SQL or seed data where you can, or by walking the user through those earlier steps again. The comment keeps only one line per step, so write each step out in full in that skill's format: one numbered list with each action and its expected result, labels taken from the code, commands in `bash` blocks, text to type in `text` blocks and URLs as links. If the list runs to more than about 10 steps, split it into groups of related steps the way that skill splits a long test, and re-test one group per run.
+If the re-test list isn't empty, run it on the wave branch, kept current, because a step can depend on more than one bead. The list covers steps the fixes touched, and steps that were blocked or not run during testing.
+
+Never send a re-test step as a title alone or as a question card. Write it out in full.
+
+1. Read `../summary-and-test/test-steps.md`. It says how a step reads and how to run it, and this stage follows it.
+2. Take each step's line from the latest `Manual test plan` comment. The comment keeps only one line per step.
+3. Before sending a step, do the setup its line records (`setup …`). If the step relies on something earlier steps in its group created, such as data the user added, and it's gone (for example after a database reset), recreate it first: yourself with SQL or seed data where you can, or by walking the user through those earlier steps again.
+4. Check the step against the code as it now is. Fix rounds change screens, labels and flows, so take the labels from the current code, not from the plan's line.
+5. Send the step written out in full by `test-steps.md`, one step per message, ending with its closing line, and wait for the user's reply. Label it with its place in this run and the plan's own step number, such as `Re-test 1 of 3 — Step 2.3 — <title>`. Before its numbered list, one line on why it's back, chosen by the step's newest result across the plan's mark, `Re-tested` comments and `Finding [manual test, step <step>]` comments. This stage records results only in comments, so the plan's mark alone can be stale.
+   - A fail: `Failed last time: <that finding's one-line summary>.`
+   - A pass: `Passed before; re-testing after the fix for: <the one-line summary of the finding whose fix touched it>.`
+   - No result anywhere (the plan marks it `blocked` or `not run`, and no comment names it): `Not run before.`
+6. If the list runs to more than about 10 steps, split it into groups of related steps the way `test-steps.md` splits a long test, and re-test one group per run.
 
 - All pass: add a `Re-tested <date>: steps <list> pass` comment on the sub-epic. If steps are left in other groups, end the run; the next run, in a new session, re-tests the next group. Otherwise carry on.
 - Any fail: add a `Finding` comment for it on the step's bead, reopen the bead, and end the run. The next run starts with a fix round.
@@ -518,4 +530,5 @@ git merge-tree --write-tree origin/main <HEAD>; git rev-parse 'origin/main^{tree
 - Don't send findings that share a cause in shared code to each bead's fix. Offer the owner one repair bead.
 - Don't resolve a thread without an outcome reply, or leave a replied-to thread unresolved.
 - Don't edit bead descriptions. Findings, deferrals and re-test records go in comments.
+- Don't send a re-test step as a title alone or as a question card. Write it out in full.
 - Don't start the next wave. That's `/iwol:beads-implement`, in a new session.

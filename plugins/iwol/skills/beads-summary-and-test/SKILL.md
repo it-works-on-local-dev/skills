@@ -109,6 +109,7 @@ When the latest plan still has steps `not run` that no later `Re-tested` comment
 - Don't write or edit code as part of this skill, even to fix something the user finds while testing. Record a finding; `/iwol:beads-pr` runs the fix.
 - Don't commit, open a PR, or close beads. That's `/iwol:beads-pr`.
 - Don't dump the full test plan at once — one step, wait, next step.
+- Don't send a step as a title alone or as a question card. Write it out in full.
 - Don't run more than one group of a split test in a session unless the user asks. The next group starts in a new session, from a small context.
 - Don't split a step into a list of actions and a separate list of expected results, and don't shorten steps on the assumption that the user knows the app.
 - Don't pad the summary. If a one-liner covers a bead, use one line.

@@ -67,7 +67,7 @@ When this session's steps are done, or the user stops early:
 
 1. List the findings, one line each. With none, go to the close.
 2. Offer to fix them now, in this session. On the user's yes, fix them, then run the narrowest checks that cover what you changed, per the config's Checks section. If the user declines, leave the findings listed (and in the saved plan) and go to the close.
-3. Re-test: send each failed step again, and each step it blocked, one at a time and in the same format, checked against the code as it now is. A step that still fails is a finding again. Offer another fix, but after two tries at the same step, stop and leave it with the user.
+3. Re-test: send each failed step again, and each step it blocked, one at a time, checked against the code as it now is. Never send a re-test as a title alone or as a question card: write each step out in full by `test-steps.md`, ending with its closing line. Label it with its place in the re-test and the plan's own step number, such as `Re-test 1 of 3 — Step 2.3 — <title>`. Before its numbered list, one line on why it's back: `Failed last time: <the finding's one-line summary>.`, from this session's list of findings, or `Not run before.` for a step that was blocked. A step that still fails is a finding again. Offer another fix, but after two tries at the same step, stop and leave it with the user.
 4. Update the saved plan, if there is one, with the new blob of each file the fixes changed in `Covers uncommitted:`.
 
 Don't commit or push. The fixes stay in the working tree for `/iwol:create-pr`, which commits them, or adds them to the PR when the user says so.
@@ -101,5 +101,6 @@ When the PR's plan still has steps `not run`, carry on with it rather than plann
 - Don't fix anything until this session's steps are done.
 - Don't commit or push, and don't open or merge a PR. That's `/iwol:create-pr`.
 - Don't dump the full test plan at once: one step, wait, next step.
+- Don't send a step or a re-test as a title alone or as a question card. Write it out in full.
 - Don't run more than one group of a split test in a session unless the user asks. The next group starts in a new session, from a small context.
 - Don't pad the summary. If a one-liner covers a unit, use one line.

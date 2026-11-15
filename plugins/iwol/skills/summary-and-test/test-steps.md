@@ -45,6 +45,8 @@ A step looks like this:
    **Expect:** <what the field shows>.
 5. Tap **<button label>** <where it is>.
    **Expect:** <the result>.
+
+Reply **pass**, or tell me what you saw instead.
 ````
 
 ## Keep each session's test short
@@ -59,7 +61,15 @@ Before step 1, tell the user in one line how many groups and steps there are, an
 
 ## Running the steps
 
-Do NOT print the whole plan up front. Send only step 1. Wait for the user's reply (pass, fail, or feedback) before sending step 2, and so on, in the same message-per-step rhythm all the way through. This is a hard requirement, not a default — even if you're confident the user wants the full list, hold it back.
+Do NOT print the whole plan up front. Send only step 1. Wait for the user's typed reply before sending step 2, and so on, in the same message-per-step rhythm all the way through. This is a hard requirement, not a default — even if you're confident the user wants the full list, hold it back.
+
+Write out every step you send in full, in the format under *Writing a step*: a first test, a later group and a re-test alike. A title, a one-line summary or the saved plan's one-line form is never enough. The user can only test what's on the screen in front of them.
+
+End every step, re-tests included, with this line after its numbered list, as the sample step shows: Reply **pass**, or tell me what you saw instead.
+
+The user answers by typing, and any reply counts. "pass", "ok", "works" or a thumbs-up is a pass. Anything short of a clear pass, such as a description of what happened, is a failure or feedback to understand. Never ask the user to rephrase a reply into a fixed word.
+
+While a step is open, from the moment it's sent until its result is recorded, use no question tool and no pass or fail buttons of any kind, the desktop app's next-step box included. A question card hides the step, or takes its place, and the user is left with buttons and nothing to test. Ask follow-up questions about a failure ("what did you see?", "which bead is at fault?") in plain text under the step. Decisions outside a step, such as going on without testing or fixing the findings now, stay as each skill has them.
 
 Since the full plan is built silently before the first step is sent, its total length is already known — label every step with its position and the total (the group's total, in a plan with groups), plus a short title, e.g. "Step 1 of 6 — Confirm a cart id appears in local storage". Keep the total fixed once testing starts; if a mid-plan finding (e.g. a bug the user reports) leads you to add a step, say so explicitly ("adding a step — now 7 total") rather than silently changing the count.
 
