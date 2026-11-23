@@ -156,7 +156,7 @@ Versions follow semver, and the major number is a signal: a major release, from 
 
 The labels follow: `/iwol:beads-summarize-and-test` names its session `[<id>] summarize and test` (was `summary and test`), and `/iwol:beads-ship` names its session `[<sub-epic id>] ship-<n>` (was `pr-<n>`) and counts its runs by `Ship session <n>` comments on the sub-epic (was `PR session <n>`).
 
-**Close every open wave before updating a repository to 2.0.0.** `/iwol:beads-ship` doesn't count the `PR session <n>` comments a wave in flight already has.
+**Close every open wave before your computer gets 2.0.0.** `/iwol:beads-ship` doesn't count the `PR session <n>` comments a wave in flight already has. Updates arrive per computer, not per repository: with auto-update on, 2.0.0 reaches every repository on the computer as soon as the Release PR merges. To finish a wave first, turn auto-update off for the `iwol` marketplace, or register the marketplace at `#v1.8.0` (see above), and update once the waves are closed.
 
 `/iwol:setup` reports local copies in `.claude/skills/` under the old names as replaced, for you to delete.
 
