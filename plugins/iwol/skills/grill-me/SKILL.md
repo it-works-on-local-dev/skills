@@ -27,7 +27,7 @@ If a question can be answered by exploring the codebase, explore the codebase in
   If a file of that name already holds another plan, add a word to the slug; if it holds this plan from an earlier grilling, update it. Name the file's absolute path, then offer the next step, in this same session, as a lead-in line and the command in a `text` block:
 
   ```text
-  /iwol:plan-digest
+  /iwol:digest-plan
   ```
 
 ## Before the first question

@@ -3,7 +3,7 @@
 <!--
 Template for .claude/iwol-config.md. Every skill in the iwol plugin reads that file for everything
 specific to a repository: the bead skills (beads-decompose-plan, beads-implement,
-beads-summary-and-test, beads-pr) and the PR and release skills.
+beads-summarize-and-test, beads-ship) and the PR and release skills.
 
 To adopt the plugin in a repository:
 1. Enable it. The machine needs the iwol marketplace registered (see the README of

@@ -42,7 +42,7 @@ Every wave runs in a worktree of its own, which `/iwol:beads-implement` creates 
 - Each **sub-epic is an execution wave**: a set of beads that all run **simultaneously**, in parallel, with no ordering between them.
 - Each sub-epic gets **small coding tasks** underneath.
 
-Each bead is also a unit of review. After a wave is built and tested, `/iwol:beads-pr` opens one pull request per bead, and each PR is reviewed and merged on its own. So the way you split work into beads decides how big the PRs are.
+Each bead is also a unit of review. After a wave is built and tested, `/iwol:beads-ship` opens one pull request per bead, and each PR is reviewed and merged on its own. So the way you split work into beads decides how big the PRs are.
 
 This structure exists because of how the companion `/iwol:beads-implement` skill is used: the user runs one prompt per sub-epic, in numeric order — `/iwol:beads-implement <epic>.1`, then `/iwol:beads-implement <epic>.2`, and so on — and each run fans **every** bead of that sub-epic out to sub-agents **at once**. There is no "run this bead first, then the rest" inside a sub-epic. Ever.
 

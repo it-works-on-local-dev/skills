@@ -1,13 +1,13 @@
 ---
-name: summary-and-test
-description: Summarize the changes on the current branch or a pull request that isn't a Beads wave, check them against the code, walk the user through manual testing one step at a time, then fix what failed in the same session and re-test it. Use when the user runs /iwol:summary-and-test, or asks to "summarize and test this", "walk me through testing this branch", "manually test this PR", or wants a brief recap plus guided manual verification of work done without beads. For a Beads epic or wave, use /iwol:beads-summary-and-test instead.
+name: summarize-and-test
+description: Summarize the changes on the current branch or a pull request that isn't a Beads wave, check them against the code, walk the user through manual testing one step at a time, then fix what failed in the same session and re-test it. Use when the user runs /iwol:summarize-and-test, or asks to "summarize and test this", "walk me through testing this branch", "manually test this PR", or wants a brief recap plus guided manual verification of work done without beads. For a Beads epic or wave, use /iwol:beads-summarize-and-test instead.
 ---
 
-# Summary and Test
+# Summarize and Test
 
 Recap what a branch or PR changes, confirm it against the code, then walk the user through a manual test one step at a time, with concrete URLs. When testing ends, fix what failed and re-test it. Brevity is the point: this is a wrap-up tool, not a report.
 
-It's the counterpart of `/iwol:beads-summary-and-test` for work that isn't a Beads wave: changes made in a session, on a branch, or in a PR. Run it before `/iwol:create-pr`, or while the PR is a draft.
+It's the counterpart of `/iwol:beads-summarize-and-test` for work that isn't a Beads wave: changes made in a session, on a branch, or in a PR. Run it before `/iwol:create-pr`, or while the PR is a draft.
 
 Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, files to leave alone and the PR rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`.
 
@@ -15,7 +15,7 @@ Read `.claude/iwol-config.md` first. It holds everything specific to this reposi
 
 - **A PR number or URL in the args:** test that PR. The test runs this checkout's code, so its branch has to be the one checked out. If `git branch --show-current` isn't the PR's `headRefName` (`gh pr view <PR> --json headRefName,isDraft`), offer `gh pr checkout <PR>` when `git status --short` shows no changes to tracked files; otherwise stop and tell the user which branch to switch to. If `git worktree list` shows the branch checked out in another folder, such as a worktree `/iwol:start` made, move there instead, as *Entering one* in `../start/worktrees.md` says: git checks a branch out in only one worktree, and an earlier session's uncommitted fixes are there. *Entering one* stops and tells the user to run this skill from that folder when it isn't under `.claude/worktrees/`.
 - **No args:** test the current branch: everything it changes against `origin/main`, committed or not. If it's `main` with nothing changed, say there's nothing to test and stop. If the branch has an open PR (`gh pr view --json number,isDraft`), that's the PR this skill saves a split plan on.
-- **A Beads epic or bead ID:** that's `/iwol:beads-summary-and-test`. Say so and stop.
+- **A Beads epic or bead ID:** that's `/iwol:beads-summarize-and-test`. Say so and stop.
 
 If the PR is ready rather than a draft, say in one line that `/iwol:create-pr` merges a ready PR once its review is clean, which could happen mid-test, and that `gh pr ready <PR> --undo` makes it a draft while testing.
 
@@ -75,7 +75,7 @@ Don't commit or push. The fixes stay in the working tree for `/iwol:create-pr`, 
 Then give a short close: how many of this session's steps passed, failed or were blocked, what was fixed and re-tested, and the next step, as a lead-in line and one command in a `text` block. While groups remain, the next step is the next group (name it) in a new session started in this folder (give its path, from `git rev-parse --show-toplevel`, in the lead-in): the branch is checked out here, and any fixes are uncommitted here. The block holds the command with the real PR, or without one when this run tested the folder:
 
 ```text
-/iwol:summary-and-test <PR>
+/iwol:summarize-and-test <PR>
 ```
 
 Otherwise the block holds the command that commits the work and opens the PR or pushes to it:
@@ -97,7 +97,7 @@ When the PR's plan still has steps `not run`, carry on with it rather than plann
 
 ## Non-goals
 
-- Don't test a Beads epic or wave: that's `/iwol:beads-summary-and-test`.
+- Don't test a Beads epic or wave: that's `/iwol:beads-summarize-and-test`.
 - Don't fix anything until this session's steps are done.
 - Don't commit or push, and don't open or merge a PR. That's `/iwol:create-pr`.
 - Don't dump the full test plan at once: one step, wait, next step.

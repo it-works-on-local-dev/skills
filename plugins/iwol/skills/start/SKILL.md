@@ -63,7 +63,7 @@ Otherwise, do the work in the worktree. When the args named a plan file, what to
 - The next steps: test the work, then ship it with `/iwol:create-pr`, which opens the PR from this branch and, once the PR has merged, brings the session back to where it started and removes the worktree. Give the first in a `text` block:
 
   ```text
-  /iwol:summary-and-test
+  /iwol:summarize-and-test
   ```
 
 - In a later session, `/iwol:start <prefix>/<description>` moves that session into this worktree.

@@ -1,6 +1,6 @@
 # Manual test steps
 
-How to write, size and run a guided manual test. `/iwol:summary-and-test` and `/iwol:beads-summary-and-test` both follow it. Each of them says what it tests, where a failure is recorded, and where the plan is saved.
+How to write, size and run a guided manual test. `/iwol:summarize-and-test` and `/iwol:beads-summarize-and-test` both follow it. Each of them says what it tests, where a failure is recorded, and where the plan is saved.
 
 ## Writing a step
 
