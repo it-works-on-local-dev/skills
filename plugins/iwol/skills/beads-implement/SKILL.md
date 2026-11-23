@@ -1,6 +1,6 @@
 ---
 name: beads-implement
-description: Orchestrate the execution of a sub-epic of beads (work items) by fanning its child beads out to parallel sub-agents, then verifying all the results centrally. Use this skill whenever the user wants to build, run, execute, or implement beads — including phrases like "run phase 1", "implement this sub-epic", "execute these beads", "build out the beads", "kick off the sub-agents for this", or when they hand over a bead ID and ask for the work to be done. Also runs fix rounds (`fix <bead-id> …`) on beads with open findings, usually called by beads-pr. Always use this skill for bead execution — do not dispatch sub-agents or start implementing beads without it.
+description: Orchestrate the execution of a sub-epic of beads (work items) by fanning its child beads out to parallel sub-agents, then verifying all the results centrally. Use this skill whenever the user wants to build, run, execute, or implement beads — including phrases like "run phase 1", "implement this sub-epic", "execute these beads", "build out the beads", "kick off the sub-agents for this", or when they hand over a bead ID and ask for the work to be done. Also runs fix rounds (`fix <bead-id> …`) on beads with open findings, usually called by beads-ship. Always use this skill for bead execution — do not dispatch sub-agents or start implementing beads without it.
 ---
 
 # Beads Implement
@@ -9,7 +9,7 @@ Orchestrate one sub-epic of a bead graph. Launch its child beads across parallel
 
 Two things define this role. First, **you write no implementation code.** Your job is dispatch, sequencing, and verification. Second, **all verification is yours alone.** Sub-agents produce artifacts; they do not get to grade their own work. An agent that just wrote a change is the worst possible judge of whether it broke something, and an agent running tests in its own sandbox tells you nothing about the state of the repo after every wave lands together.
 
-This skill stops at verified, uncommitted work. Committing, the pull requests (one per bead), review rounds, merging and closing the wave belong to `/iwol:beads-pr`.
+This skill stops at verified, uncommitted work. Committing, the pull requests (one per bead), review rounds, merging and closing the wave belong to `/iwol:beads-ship`.
 
 Read `.claude/iwol-config.md` first. It holds everything specific to this repository: check commands, generated files, local services, the PR reviewer and merge rules. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block.
 
@@ -35,14 +35,14 @@ Load the bead and check what kind of node it is:
 
 Waves run strictly in order, and a wave is finished only when every bead's PR has merged and its sub-epic is closed. If an earlier sub-epic of the same epic isn't closed yet, stop and say which one: its PRs probably haven't all merged.
 
-Then name the session `[<id>] implementation`, where `<id>` is the ID this run was given: the sub-epic, or a leaf bead. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. Fix mode doesn't rename: it runs inside a `/iwol:beads-pr` session, which keeps its own name.
+Then name the session `[<id>] implementation`, where `<id>` is the ID this run was given: the sub-epic, or a leaf bead. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. Fix mode doesn't rename: it runs inside a `/iwol:beads-ship` session, which keeps its own name.
 
 Every wave runs in its own worktree, named as in *Branch and worktree names* below, wherever the session started; the main checkout's branch is never switched. Create, enter and prepare it as `../start/worktrees.md` says (read it first), before dispatching anything. For a leaf bead, use its sub-epic's branch and worktree.
 
-- **The wave's branch already exists** (`git branch --list 'feature/<sub-epic-id>-*'`): this is a re-run (after a blocked bead, a usage limit, or in a new session). Enter the wave's worktree as *Entering one* says, which also covers a worktree left on a bead branch. If the branch isn't checked out anywhere and the wave's worktree doesn't exist, create it on the branch (*Creating one*, without `-b`) and enter that. A wave started before waves had their own worktrees may be checked out in the main checkout: then run there, and if this session isn't there, stop and tell the user to run from the main checkout, giving the command in a `text` block with the real id. Carry on with the beads that aren't closed, except those open only because of an open finding (a `Finding [` comment with no later `Resolved`, `Deferred` or `Declined` comment). Testing or review reopened those, and they're fixed through `/iwol:beads-pr`'s fix round, not implemented again. A `blocked` bead the user has since sorted out is run again here.
+- **The wave's branch already exists** (`git branch --list 'feature/<sub-epic-id>-*'`): this is a re-run (after a blocked bead, a usage limit, or in a new session). Enter the wave's worktree as *Entering one* says, which also covers a worktree left on a bead branch. If the branch isn't checked out anywhere and the wave's worktree doesn't exist, create it on the branch (*Creating one*, without `-b`) and enter that. A wave started before waves had their own worktrees may be checked out in the main checkout: then run there, and if this session isn't there, stop and tell the user to run from the main checkout, giving the command in a `text` block with the real id. Carry on with the beads that aren't closed, except those open only because of an open finding (a `Finding [` comment with no later `Resolved`, `Deferred` or `Declined` comment). Testing or review reopened those, and they're fixed through `/iwol:beads-ship`'s fix round, not implemented again. A `blocked` bead the user has since sorted out is run again here.
 - **Otherwise,** create the wave's worktree on a new branch from `origin/main` (*Creating one*): `git worktree add "<main checkout>/.claude/worktrees/<sub-epic-id>-<title>" -b feature/<sub-epic-id>-<title> origin/main`. Enter it, and prepare it as the config's `Worktree setup:` line says (nothing when it's `none`). Uncommitted changes in the folder the session started in stay there, and aren't part of the wave.
 
-Entering the worktree is what makes the wave run there: sub-agents start in the session's folder, so once the session is in the wave's worktree, every bead's edits land there. Git lets a branch be checked out in only one worktree, so every later session for this wave (`/iwol:beads-summary-and-test`, `/iwol:beads-pr`) enters the same worktree. The wave branch stays local. `/iwol:beads-pr` later splits it into one branch and PR per bead, using the file lists recorded in Step 4, and removes the wave's worktree once every PR has merged.
+Entering the worktree is what makes the wave run there: sub-agents start in the session's folder, so once the session is in the wave's worktree, every bead's edits land there. Git lets a branch be checked out in only one worktree, so every later session for this wave (`/iwol:beads-summarize-and-test`, `/iwol:beads-ship`) enters the same worktree. The wave branch stays local. `/iwol:beads-ship` later splits it into one branch and PR per bead, using the file lists recorded in Step 4, and removes the wave's worktree once every PR has merged.
 
 ### Branch and worktree names
 
@@ -64,7 +64,7 @@ Where you find a likely collision, stop before dispatching. Tell the user which 
 
 ## Step 3 — Dispatch, one sub-agent per bead
 
-When the wave starts, set its sub-epic to `in_progress` (`bd update <sub-epic> --status in_progress`). It stays that way until `/iwol:beads-pr` closes it once every bead's PR has merged.
+When the wave starts, set its sub-epic to `in_progress` (`bd update <sub-epic> --status in_progress`). It stays that way until `/iwol:beads-ship` closes it once every bead's PR has merged.
 
 Before dispatching a bead, set its status to `in_progress` (e.g. `bd update <id> --status in_progress`). Do this for every bead in the wave as you pick it up, right before launching its sub-agent — it marks the bead as claimed for the duration of the run, not just planned.
 
@@ -117,7 +117,7 @@ Then work through the wave in two parts. The first runs once for the whole wave,
 
 **Then, for each completed bead:**
 
-5. Record the bead's files in a comment: `Files: <path>, <path> (deleted), <path> (generated), …`. List every file the bead created, modified or deleted, taken from the sub-agent's report and checked against `git status` and `git diff`. Add the generated files it caused, marked `(generated)`: each one in the config whose inputs this bead changed. `/iwol:beads-pr` uses these lists to give each bead its own PR. If a non-generated file shows up in two beads' lists, say so in your report.
+5. Record the bead's files in a comment: `Files: <path>, <path> (deleted), <path> (generated), …`. List every file the bead created, modified or deleted, taken from the sub-agent's report and checked against `git status` and `git diff`. Add the generated files it caused, marked `(generated)`: each one in the config whose inputs this bead changed. `/iwol:beads-ship` uses these lists to give each bead its own PR. If a non-generated file shows up in two beads' lists, say so in your report.
 6. Mark the bead `done` only when both hold: every acceptance criterion is met in observable terms, *and* every verification command you ran passes. If you accept a failure, document explicitly what failed and why you accepted it — never mark something done past a silent failure.
 
 On verification failure, keep the bead `in_progress` while you deal with it. Record what failed — the commands, the output, the files involved — and either re-dispatch with that context attached or flag it for a human if it looks like the bead itself is wrong. Wait for every re-dispatched agent in flight to finish, then run the whole-wave part again (items 1–4) once, before each re-dispatched bead's part (items 5–6), so their changes are rebuilt, formatted, refreshed and verified like the rest of the wave's. When you flag it, or it still fails after re-dispatching, set it to `blocked` (`bd update <id> --status blocked`). Add a comment saying what failed and what it needs, so it doesn't look like an agent is still working on it.
@@ -134,7 +134,7 @@ Resuming a sub-agent with `SendMessage` replays its whole transcript, and by the
 
 Beads in a sub-epic never depend on each other, so there's no second round inside it. Once every bead in the wave is `done` or `blocked`, the run is over.
 
-Leave the sub-epic `in_progress`, and don't commit. `/iwol:beads-pr` commits the work, opens one PR per bead, and closes the sub-epic when they have all merged.
+Leave the sub-epic `in_progress`, and don't commit. `/iwol:beads-ship` commits the work, opens one PR per bead, and closes the sub-epic when they have all merged.
 
 Then report:
 
@@ -145,15 +145,15 @@ Then report:
 - The next step, in a new session. Give it as a lead-in line and the command in a `text` block with the real id, so the user gets a Copy button:
 
   ```text
-  /iwol:beads-summary-and-test <sub-epic id>
+  /iwol:beads-summarize-and-test <sub-epic id>
   ```
 
 ## Fix mode
 
-Called as `fix <bead-id> [<bead-id> …]`, normally by `/iwol:beads-pr` after a review or manual test turned up findings. Each bead is a leaf bead with at least one open finding: a comment starting `Finding [` with no later comment starting `Resolved <its id>`, `Deferred <its id>` or `Declined <its id>`. If a bead has no open findings, say so and leave it alone.
+Called as `fix <bead-id> [<bead-id> …]`, normally by `/iwol:beads-ship` after a review or manual test turned up findings. Each bead is a leaf bead with at least one open finding: a comment starting `Finding [` with no later comment starting `Resolved <its id>`, `Deferred <its id>` or `Declined <its id>`. If a bead has no open findings, say so and leave it alone.
 
-1. Reopen each closed bead (`bd reopen <id> --reason "Fix round: <k> open findings"`), then set every bead `in_progress`. A repair bead that `/iwol:beads-pr` just created is already open.
-2. **Keep each fix inside its own bead's files.** A bead's fix may change only the files in its `Files:` comments, plus new files it creates, which then become its own. If a finding looks like it needs another bead's file, or two beads' fixes would touch the same file, don't dispatch those beads. Report it to the caller instead; `/iwol:beads-pr` asks the owner. Running such fixes one after the other would put one bead's change into another bead's PR, so it couldn't stand alone on `main`.
+1. Reopen each closed bead (`bd reopen <id> --reason "Fix round: <k> open findings"`), then set every bead `in_progress`. A repair bead that `/iwol:beads-ship` just created is already open.
+2. **Keep each fix inside its own bead's files.** A bead's fix may change only the files in its `Files:` comments, plus new files it creates, which then become its own. If a finding looks like it needs another bead's file, or two beads' fixes would touch the same file, don't dispatch those beads. Report it to the caller instead; `/iwol:beads-ship` asks the owner. Running such fixes one after the other would put one bead's change into another bead's PR, so it couldn't stand alone on `main`.
 3. Dispatch a **new** sub-agent per bead, never a resumed one, with the bead's `agent:` and `effort:` labels as in Step 3. Its brief is the bead's full text and comments, headed by a list of the open findings it must fix. Its job is to fix those findings without breaking the bead's acceptance criteria. List the files it may change (the bead's own), and tell it to report instead of editing anything else. Tell it to **change only what each finding needs**: no refactoring, renaming or tidying of other code. Every extra change is new code for the next review to find problems in, and that's how review rounds multiply. The same rules about not running verification apply.
 
    Tell it too that **a cause outside its bead's files isn't its to fix.** When a finding's cause is in a file outside the bead's files (shared code, or another bead's file), it must not work around it in its own files: no height estimates from the window size, no timers to wait out a race, no copies of shared hooks or helpers. It reports the cause instead, with file:line evidence and the change that file needs, and leaves that finding open. A workaround hides the symptom on one screen, leaves it on every other screen that uses the shared code, and is more code to take out once the cause is fixed. In one fix round, five agents worked around two shared causes this way, with window-size height estimates, a copied hook and a settle timer, and all of it had to be removed again.
@@ -162,7 +162,7 @@ Called as `fix <bead-id> [<bead-id> …]`, normally by `/iwol:beads-pr` after a 
 6. If verification fails, re-dispatch once to a new agent with the failure attached. Then wait for every re-dispatched agent in flight to finish, and run step 4 once for them (the scope check, the rebuild, `Format:`, `Format check:`, `Post-wave refresh:` and verification), before judging any of them. Judging earlier lets the formatter rewrite files another agent is still editing, counts a sibling's half-finished work as this bead's second failure, or fails `Format check` on unformatted output. If it fails again, set the bead to `blocked`, add a comment saying what failed, and report it.
 7. **Report causes outside the beads' files.** Check each cause a sub-agent reported against the code before passing it on. If it's in the bead's own files after all, re-dispatch as in step 6. Otherwise record it on the bead whose finding it explains, so a later run doesn't have to work it out again: `Cause for <finding id>: <file:line> — <the change that file needs>`.
    - **In another bead's file:** report it to the caller, as in step 2.
-   - **In shared code no bead owns** (a file in no `Files:` comment of a bead whose PR hasn't merged, usually because it's already on `main`): when findings on two or more beads share the cause, stop work on those findings. Don't re-dispatch them, and don't accept a fix for them in any bead's files. Report the cause to the caller and propose one repair bead under the wave's sub-epic that owns the shared file and fixes the cause once, with those findings deferred to it. Give the cause with file:line evidence, the change the file needs, and each finding it explains (bead and finding id). Report a shared cause behind a single bead's finding the same way. `/iwol:beads-pr` asks the owner and creates the repair bead; fix mode creates none.
+   - **In shared code no bead owns** (a file in no `Files:` comment of a bead whose PR hasn't merged, usually because it's already on `main`): when findings on two or more beads share the cause, stop work on those findings. Don't re-dispatch them, and don't accept a fix for them in any bead's files. Report the cause to the caller and propose one repair bead under the wave's sub-epic that owns the shared file and fixes the cause once, with those findings deferred to it. Give the cause with file:line evidence, the change the file needs, and each finding it explains (bead and finding id). Report a shared cause behind a single bead's finding the same way. `/iwol:beads-ship` asks the owner and creates the repair bead; fix mode creates none.
 
 Don't commit, and don't touch the sub-epic's status. Report back what was fixed, what is still open (with the causes from step 7), and the files changed. The caller commits.
 
@@ -172,6 +172,6 @@ Don't commit, and don't touch the sub-epic's status. Report back what was fixed,
 - Don't edit a bead's description to make it pass. If a bead is wrong, say so.
 - Don't collapse multiple beads into a single sub-agent, even when they look adjacent.
 - Don't delegate test execution, linting, type checking, e2e, or builds to sub-agents under any framing. Verification is yours.
-- Don't commit, push, open or update PRs, or close the sub-epic. That's `/iwol:beads-pr`.
+- Don't commit, push, open or update PRs, or close the sub-epic. That's `/iwol:beads-ship`.
 - Don't resume a sub-agent after a long gap or a usage-limit cutoff. Start a new one.
 - Don't accept a fix that works around a cause outside its bead's files or copies shared logic. The cause gets reported, and fixed once where it lives.

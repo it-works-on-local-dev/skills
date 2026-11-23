@@ -1,9 +1,9 @@
 ---
-name: beads-pr
-description: Take a tested wave to merged pull requests, one PR per bead, then close the wave's sub-epic. Covers splitting the local wave branch into per-bead branches, opening the PRs, the one refresh PR for generated files the config ships once per wave (or, in a wave with one bead PR, that PR carrying them instead), triaging review comments and CI failures across them, sending fixes through beads-implement's fix mode, replying to and resolving every thread, syncing with main, merging, and closing the wave once every bead's PR has merged. Use after /iwol:beads-summary-and-test, or when the user runs /iwol:beads-pr <sub-epic-id> or says things like "open the PRs for this wave", "handle the review", "address the review comments", "is the wave ready to merge", or "merge the wave". Always use this skill for a wave's PRs — do not open, fix, or merge them ad hoc.
+name: beads-ship
+description: Take a tested wave to merged pull requests, one PR per bead, then close the wave's sub-epic. Covers splitting the local wave branch into per-bead branches, opening the PRs, the one refresh PR for generated files the config ships once per wave (or, in a wave with one bead PR, that PR carrying them instead), triaging review comments and CI failures across them, sending fixes through beads-implement's fix mode, replying to and resolving every thread, syncing with main, merging, and closing the wave once every bead's PR has merged. Use after /iwol:beads-summarize-and-test, or when the user runs /iwol:beads-ship <sub-epic-id> or says things like "open the PRs for this wave", "handle the review", "address the review comments", "ship the wave", "is the wave ready to merge", or "merge the wave". Always use this skill for a wave's PRs — do not open, fix, or merge them ad hoc.
 ---
 
-# Beads PR
+# Beads Ship
 
 Take one tested wave from the local wave branch to merged pull requests, then close the wave. Each bead gets its own PR, because small PRs get thorough reviews. Wave-sized PRs of tens of thousands of lines have needed four to six review rounds each, because no single review covered them. Generated files the config ships once per wave go in one refresh PR after the bead PRs merge; in a wave with one bead PR, that PR carries them, and the wave needs no refresh PR. A wave is finished only when every bead's PR, and its refresh PR if it needs one, has merged and its sub-epic is closed.
 
@@ -48,7 +48,7 @@ If no bead ID is in the conversation or the command args, stop and ask for it. D
 - **Leaf bead** — stop. Runs cover a whole wave; ask for the sub-epic ID.
 - **Doesn't resolve** — say so and stop.
 
-Once it resolves to a sub-epic, name the session `[<sub-epic id>] pr-<n>`, where `<n>` numbers this run among the wave's `beads-pr` runs. Count the sub-epic's comments that start `PR session ` (`bd comments <sub-epic-id> --json`): `<n>` is one more. Add `bd comments add <sub-epic-id> "PR session <n>"`, so the next run counts this one, even where the session can't be renamed. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. If this session already ran this skill for the same sub-epic, keep its number: add no comment and don't rename.
+Once it resolves to a sub-epic, name the session `[<sub-epic id>] ship-<n>`, where `<n>` numbers this run among the wave's `beads-ship` runs. Count the sub-epic's comments that start `Ship session ` (`bd comments <sub-epic-id> --json`): `<n>` is one more. Add `bd comments add <sub-epic-id> "Ship session <n>"`, so the next run counts this one, even where the session can't be renamed. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. If this session already ran this skill for the same sub-epic, keep its number: add no comment and don't rename.
 
 Then move into the wave branch's worktree (see *Branches*), before reading any state from git. If the wave branch is already gone, as after a clean-up that stopped partway, enter the wave's worktree if `git worktree list` still shows `.claude/worktrees/<sub-epic-id>-<title>` (match it by `<sub-epic-id>-`), so *Clean up* removes it as this session's own. If neither is there, stay where you are.
 
@@ -58,7 +58,7 @@ Gather everything fresh:
 
 - The sub-epic and its child beads: status and comments (`bd show`, `bd children`, `bd comments <id>`), and each bead's files.
 - **Open findings**: `Finding` comments on the wave's beads with no later `Resolved <id>`, `Deferred <id>` or `Declined <id>` comment (see *Finding comments*).
-- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` or `Finding [manual test, step <step>]` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summary-and-test <sub-epic-id>` first, giving the command in a `text` block with the real id, and ask whether to go on.
+- The sub-epic's latest `Manual test plan` comment. If there is none, testing was skipped. Warn the user and ask whether to go on before opening any PRs. If it splits the test into groups and a group has no step run yet, and none re-tested since (a later `Re-tested` or `Finding [manual test, step <step>]` comment), testing isn't finished: name the groups left, suggest finishing them with `/iwol:beads-summarize-and-test <sub-epic-id>` first, giving the command in a `text` block with the real id, and ask whether to go on.
 - **Re-test list**: steps named in `Re-test needed` comments on the sub-epic, plus steps the test plan marks `blocked` or `not run`. Leave out any step a later `Re-tested` comment covers.
 - The wave branch and working tree: current branch, uncommitted changes.
 - **Each bead's PR**, from the bead's external ref `gh-<n>`, set when its PR opens.
@@ -118,7 +118,7 @@ End with one line per PR: its number, its bead (or "refresh"), and where it stan
 **Do not wait, poll, sleep or schedule a wake-up** for the reviewer or CI. Report what's pending and tell the user to run this skill again, in a new session, once it has landed. Give the command in a `text` block with the real id:
 
 ```text
-/iwol:beads-pr <sub-epic-id>
+/iwol:beads-ship <sub-epic-id>
 ```
 
 ## Stage — Triage
@@ -208,7 +208,7 @@ If the re-test list isn't empty, run it on the wave branch, kept current, becaus
 
 Never send a re-test step as a title alone or as a question card. Write it out in full.
 
-1. Read `../summary-and-test/test-steps.md`. It says how a step reads and how to run it, and this stage follows it.
+1. Read `../summarize-and-test/test-steps.md`. It says how a step reads and how to run it, and this stage follows it.
 2. Take each step's line from the latest `Manual test plan` comment. The comment keeps only one line per step.
 3. Before sending a step, do the setup its line records (`setup …`). If the step relies on something earlier steps in its group created, such as data the user added, and it's gone (for example after a database reset), recreate it first: yourself with SQL or seed data where you can, or by walking the user through those earlier steps again.
 4. Check the step against the code as it now is. Fix rounds change screens, labels and flows, so take the labels from the current code, not from the plan's line.
@@ -245,7 +245,7 @@ Never send a re-test step as a title alone or as a question card. Write it out i
 7. If these were the wave's first PRs, end the run. Tell the user to run this skill in a new session once the reviews are in, giving the command in a `text` block with the real id:
 
    ```text
-   /iwol:beads-pr <sub-epic-id>
+   /iwol:beads-ship <sub-epic-id>
    ```
 
    Mention that a wave's worth of PRs means as many reviews at once, so the reviewer's usage limit may come up.
@@ -324,7 +324,7 @@ The sub-epic records it: `Refresh PR #<n>` when it opens, and `Refresh merged in
 5. Switch back to the wave branch, and end the run. Tell the user to run this skill again, in a new session, once its CI and review are in, giving the command in a `text` block with the real id:
 
    ```text
-   /iwol:beads-pr <sub-epic-id>
+   /iwol:beads-ship <sub-epic-id>
    ```
 
 **Moving it on.** Step 1's items 6–9 treat the open refresh PR like a bead PR, except:
@@ -429,7 +429,7 @@ How to request a review, and when the reviewer reviews by itself, are in the con
 
 ## Finding comments
 
-beads-summary-and-test, this skill and beads-implement's fix mode all use one comment format, so any session can tell what's open:
+beads-summarize-and-test, this skill and beads-implement's fix mode all use one comment format, so any session can tell what's open:
 
 ```
 Finding [<source>]: <one-line summary>

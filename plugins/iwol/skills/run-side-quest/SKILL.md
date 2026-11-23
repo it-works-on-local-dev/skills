@@ -1,11 +1,11 @@
 ---
-name: side-quest
-description: Do a single task (a bead or a free-form prompt) in its own named worktree off the base branch, commit it to a local branch without pushing, remove the worktree but keep the branch, and tell the user how to pick the branch up. Use when the user runs /iwol:side-quest <bead-id or prompt>.
+name: run-side-quest
+description: Do a single task (a bead or a free-form prompt) in its own named worktree off the base branch, commit it to a local branch without pushing, remove the worktree but keep the branch, and tell the user how to pick the branch up. Use when the user runs /iwol:run-side-quest <bead-id or prompt>.
 argument-hint: <bead-id | prompt>
 disable-model-invocation: true
 ---
 
-# /iwol:side-quest
+# /iwol:run-side-quest
 
 Do one task off to the side: a bead, or a free-form prompt such as "update the docs to mention the new tools". It's done in a worktree of its own, cut from the base branch, and committed to a local branch that's never pushed. Then the worktree is removed, the branch is kept, and the session is back where it started, with its own folder untouched.
 

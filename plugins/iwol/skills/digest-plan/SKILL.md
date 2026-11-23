@@ -1,9 +1,9 @@
 ---
-name: plan-digest
-description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before the plan is built, by /iwol:beads-decompose-plan as beads or by /iwol:start as one PR. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:plan-digest the plan we just built".
+name: digest-plan
+description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before the plan is built, by /iwol:beads-decompose-plan as beads or by /iwol:start as one PR. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:digest-plan the plan we just built".
 ---
 
-# /iwol:plan-digest
+# /iwol:digest-plan
 
 Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan then goes on to `/iwol:beads-decompose-plan` (waves of beads) or `/iwol:start` (one PR), so the digest is the go/no-go before building.
 
