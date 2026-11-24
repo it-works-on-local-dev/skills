@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0](https://github.com/it-works-on-local-dev/skills/compare/v1.8.0...v2.0.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename five skills to verb-first names ([#60](https://github.com/it-works-on-local-dev/skills/issues/60))
+
+### Features
+
+* have beads-ship watch its PRs and offer the next run here or in a new session ([#62](https://github.com/it-works-on-local-dev/skills/issues/62)) ([ef2d9c4](https://github.com/it-works-on-local-dev/skills/commit/ef2d9c469630839b0d84f7c8d6496bbec2c2338c))
+* rename five skills to verb-first names ([#60](https://github.com/it-works-on-local-dev/skills/issues/60)) ([326a8a0](https://github.com/it-works-on-local-dev/skills/commit/326a8a08c71e579e9e3958c5762c9558a7f1412f))
+
 ## [1.8.0](https://github.com/it-works-on-local-dev/skills/compare/v1.7.0...v1.8.0) (2026-11-15)
 
 
