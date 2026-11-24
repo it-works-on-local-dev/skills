@@ -123,6 +123,8 @@ Then end the run as *Ending a run* says.
 
 Every run ends here: at the end of Step 1's list, or wherever a stage says to end the run. After the run's report, it either watches what is pending and offers the next run once that has settled, or offers the next run at once. The watch is the only wait in a run, and it changes nothing.
 
+The exception is a wave that's done. A run that closed the sub-epic (*Stage — Close the wave*), or found it already closed (Step 1 item 1) and finished its clean-up or had none to do, ends with that stage's report and its next step, `/iwol:beads-implement <next sub-epic id>` when there is one, with no watch and no offer: there's no next run of this skill. A clean-up that stops on an already-closed wave still ends here, and offers the next run at once.
+
 ### When to watch
 
 Watch when the run ends with something outside pending, on any open PR of the wave, the refresh PR included:
@@ -138,8 +140,10 @@ Under `CI: none`, watch only reviews; under `Reviewer: none`, only CI; with neit
 
 A PR has settled once it's no longer open, or once both of these hold:
 
-- **CI:** the CI run on its head has completed: every gating job the config names is listed by `gh pr checks <n> --json name,bucket`, and none is `pending`.
-- **Review:** its review round has ended, by the config's signals, each newer than the round's start: a summary naming the head (for the shared review workflow, its `Reviewed head: <sha>` line), a failure reply, a withheld notice, or a failed review check. The round's start is the latest request comment's `created_at`, or, for an automatic review, when the PR opened or was marked ready.
+- **CI:** the CI run on its head has completed: every gating job the config names is listed by `gh pr checks <n> --json name,bucket`, and none is `pending`. If none of them is listed 10 minutes after the head was pushed, CI has settled as `none`: the workflow skipped the PR, as a `paths` filter may for a docs-only bead or the refresh PR, and no run is coming.
+- **Review:** its review round has ended, by the config's signals, each newer than the round's start: a summary naming the head (for the shared review workflow, its `Reviewed head: <sha>` line), a failure reply, a withheld notice, or a failed review check. The round's start is the latest request comment's `created_at`. For an automatic review, it's when the PR opened or was marked ready, or, for a reviewer that reviews every push by itself, when the head was pushed, so a signal from an earlier round never ends this one.
+
+"When the head was pushed" is the head commit's committer date (`gh api repos/{owner}/{repo}/commits/<head sha> --jq .commit.committer.date`), which this skill's own pushes follow within seconds; write it into the loop's file with the rest.
 
 A request-failure reply, a request that still has no in-progress sign 5 minutes after it was posted, or a head that moved during the watch (a push from outside the run) also ends the wait on that PR: its line says so, and the next run reads why.
 
@@ -151,14 +155,15 @@ Before starting it, say in one line what it watches (the PRs by number, or `main
 
 - Write one loop to a file outside the worktree (`mktemp` prints a path; use the path it printed), built from the config, as `/iwol:create-pr`'s CI wait and review poll are. Write into the file everything it needs: each watched PR's number, head SHA and round start, its request comment's id if it has one, the gating jobs, and the reviewer's login and signals. Nothing feeds it from the session.
 - Each pass, about a minute apart, reads each item that hasn't settled once: the PR's state and head (`gh pr view <n> --json state,headRefOid`), its CI with `gh pr checks <n> --json name,bucket` (never `--watch`), and its review with the config's signals (the bot's comments since the round's start, and for a request still without one, its in-progress sign).
-- It exits when every watched item has settled or after 30 minutes, whichever comes first, and prints one line per item: the PR's number, CI (`passed`, `failed`, `pending` or `none`) and the review (`summary`, `didn't finish`, `withheld`, `request failed`, `no sign`, `head moved`, `pending` or `none`), or `merged` or `closed`; for `main`, the run's id, status and conclusion.
-- Start it with `bash <file>` as one Bash call with `run_in_background`. The session is woken when it exits. Don't poll its output, `sleep`, schedule a wake-up or use `--watch` meanwhile, and take no other step of the wave.
+- It prints as it goes, so a watch stopped early still leaves results: one line per item as soon as it settles, and one short status line per pass naming what is still pending. An item's line gives the PR's number, CI (`passed`, `failed`, `pending` or `none`) and the review (`summary`, `didn't finish`, `withheld`, `request failed`, `no sign`, `head moved`, `pending` or `none`), or `merged` or `closed`; for `main`, the run's id, status and conclusion.
+- It exits when every watched item has settled or after 30 minutes, whichever comes first, printing a last line for each item still pending.
+- Start it with `bash <file>` as one Bash call with `run_in_background`, and give the call a `timeout` above the loop's 30 minutes (such as 2,400,000 ms) where the tool takes one, so the tool doesn't stop it first. The session is woken when it exits. Don't poll its output, `sleep`, schedule a wake-up or use `--watch` meanwhile, and take no other step of the wave.
 
-If the user asks to stop the watch, stop the background command and go on to *When it ends* with what it has. A `<ci-monitor-event>` that arrives meanwhile is a report, as Step 1 says: turn Auto-fix off for that PR, and let the watch run on. If the session can't start a background command, or the command is refused, say so and go to *The offer*.
+If the user asks to stop the watch, or the tool stops it, stop the background command if it's still running and go on to *When it ends* with the lines it printed. A `<ci-monitor-event>` that arrives meanwhile is a report, as Step 1 says: turn Auto-fix off for that PR, and let the watch run on. If the session can't start a background command, or the command is refused, say so and go to *The offer*.
 
 ### When it ends
 
-Give one line per PR, as Step 1's end-of-run list does, from the loop's lines: for example "review in, CI passed", "review in, CI failed", "review didn't finish", "request failed", "requested, no sign after 5 minutes" or "merged", and for `main`, whether the run that tells passed. Name anything still pending after 30 minutes, such as "CI still running" or "review still running". Read nothing more, and triage, fix, reply to, re-run and merge nothing: those belong to the next run. A gating job still queued is reported as queued; Step 1's queued-job diagnosis runs in the next run, once per run.
+Give one line per PR, as Step 1's end-of-run list does, from the latest lines the loop printed: for example "review in, CI passed", "review in, CI failed", "no CI run", "review didn't finish", "request failed", "requested, no sign after 5 minutes" or "merged", and for `main`, whether the run that tells passed. Name anything still pending when the watch ended, such as "CI still running" or "review still running". Read nothing more, and triage, fix, reply to, re-run and merge nothing: those belong to the next run. A gating job still queued is reported as queued; Step 1's queued-job diagnosis runs in the next run, once per run.
 
 ### The offer
 
@@ -166,7 +171,7 @@ End the run with the next run, never a question card, and never by starting a se
 
 1. **The recommendation, with its reason in one line.**
    - **Here**, when this session has only read state, opened PRs, replied to threads or merged, and the run that just ended was its first or second run of this skill.
-   - **A new session**, once this session has run a fix round or a re-test, from its third run on, or when it can't tell how many runs it has done (after its context was summarised, say).
+   - **A new session** otherwise: once this session has done anything else, such as a fix round, a re-test, a sync with `main`, the wave's first commit, a CI re-run or recovery, a repair bead or a clean-up; from its third run on; or when it can't tell how many runs it has done (after its context was summarised, say).
 
    The reason names which case applies, and adds that past half on the context meter, a new session is the better pick.
 2. **The command for a new session**, in a `text` block with the real id:
