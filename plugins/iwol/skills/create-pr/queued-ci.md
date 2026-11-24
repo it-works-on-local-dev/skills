@@ -2,7 +2,7 @@
 
 How to tell why a gating CI job is still `queued` **under `self-hosted`** (the config's `Runs on:` line), and how to recover a run that no runner will take. `/iwol:create-pr` follows it from its *CI check* section once its wait for a run ends with a gating job still queued. `/iwol:beads-ship` follows it once from *A queued gating job* under its *Step 1 — Read the state*.
 
-The two skills differ in one way that matters here: create-pr waits and polls, while beads-ship reads state once per run and never waits. Where the steps below differ for them, they say what **a skill that waits** and **a skill that reads once** do.
+The two skills differ in one way that matters here: create-pr waits and polls, while beads-ship reads state once per run. Its watch at the end of a run only waits and diagnoses nothing, so here it is still a skill that reads once. Where the steps below differ for them, they say what **a skill that waits** and **a skill that reads once** do.
 
 **Under `hosted`**, none of this applies: a queued job is only waiting for GitHub's hosted runners, and re-running would only queue it again.
 
