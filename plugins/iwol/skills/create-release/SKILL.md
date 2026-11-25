@@ -96,7 +96,7 @@ git ls-remote --exit-code --tags origin "refs/tags/vX.Y.Z"
 Exit code 2 means the tag is free. If it prints the tag (exit code 0), stop and don't merge. Merging would push no tag, so `main`'s changes would never deploy, and step 5 would find the old tag's green deploy run and report success. Tell the user to land a PR on `main` through the repository's normal PR flow with a `Release-As: <next version>` footer in the body of the commit that reaches `main`, then run this skill again once the Release PR shows that version. Give the PR skill in a `text` block:
 
 ```text
-/iwol:create-pr
+/iwol:ship
 ```
 
 With `Merge method: squash`, the squash commit gets a blank body by default, so the footer in a branch commit would never reach `main`: pass it with `gh pr merge <PR> --squash --body "Release-As: <next version>"`.
@@ -265,7 +265,7 @@ A dispatch runs the workflow file stored at that tag, so an older tag whose copy
 
 - **Never create a tag or a GitHub Release by hand** in this skill: no `git tag`, no `git push` of a tag, no `gh release create`. Only the release workflow creates them.
 - **Never merge without the user's explicit go-ahead** at merge time.
-- **Never merge any PR but the Release PR,** and never one whose head isn't the config's Release PR branch, comes from a fork or lacks release-please's `autorelease: pending` label. Any other PR into `main` goes through the repository's normal PR flow (`/iwol:create-pr`).
+- **Never merge any PR but the Release PR,** and never one whose head isn't the config's Release PR branch, comes from a fork or lacks release-please's `autorelease: pending` label. Any other PR into `main` goes through the repository's normal PR flow (`/iwol:ship`).
 - **Never merge a Release PR whose `vX.Y.Z` tag already exists** (step 3's tag check), or whose tag wouldn't be v-prefixed (step 3's tag format check).
 - **Never merge a Release PR or a base branch that moved since step 3 read it:** the merge is pinned to step 2's `headRefOid` and step 4 re-checks `origin/main`.
 - **Never use admin or force options:** no `--admin` merges, no force-pushes, no skipped hooks (`--no-verify`).

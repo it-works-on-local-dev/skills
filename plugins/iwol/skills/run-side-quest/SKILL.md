@@ -11,7 +11,7 @@ Do one task off to the side: a bead, or a free-form prompt such as "update the d
 
 Read `.claude/iwol-config.md` first. If it's missing, stop and ask the user to run `/iwol:setup`, which creates it, giving the command in a `text` block. If a line this skill needs is missing from it, stop and ask the user to run `/iwol:setup` to add it, giving the command in a `text` block. In these steps, `main` means the base branch the config names, and `origin/main` means that branch on `origin`. The lines it reads: in the Git and GitHub section, the base branch, `Worktrees:`, `Worktree setup:` and `PR title format:`; in Checks, `Full check:` and `Format:`; and the Files to leave alone section.
 
-Read `../start/worktrees.md` before Step 2. It holds the naming rule and the steps for creating, entering, leaving and removing a worktree that every iwol skill follows. `cd` into the worktree isn't enough, since the shell goes back to the session's folder after every command; that's why it enters the worktree with `EnterWorktree`.
+Read `../implement/worktrees.md` before Step 2. It holds the naming rule and the steps for creating, entering, leaving and removing a worktree that every iwol skill follows. `cd` into the worktree isn't enough, since the shell goes back to the session's folder after every command; that's why it enters the worktree with `EnterWorktree`.
 
 ## Step 0 — Require an argument
 
@@ -23,10 +23,10 @@ Don't try to detect bead ids strictly. If the argument is a single token that lo
 
 ## Step 2 — Work out the names
 
-Branch `<prefix>/<description>`, worktree `.claude/worktrees/<prefix>-<description>`, as `/iwol:start` names them, so that `/iwol:start` and `/iwol:create-pr` take the branch afterwards. Pick the prefix from the table in *Branch and commit naming* in `../create-pr/SKILL.md` by what the work is; anything that doesn't clearly fit is `chore`, so don't ask.
+Branch `<prefix>/<description>`, worktree `.claude/worktrees/<prefix>-<description>`, as `/iwol:implement` names them, so that `/iwol:implement` and `/iwol:ship` take the branch afterwards. Pick the prefix from the table in *Branch and commit naming* in `../ship/SKILL.md` by what the work is; anything that doesn't clearly fit is `chore`, so don't ask.
 
 - **A prompt:** `<description>` is the prompt shortened to a few words, dropping filler such as "the", "a" and "some", put through the `<description>` rule in `worktrees.md`.
-- **A bead:** `<description>` is `<bead-id> <title>`, the id and the bead's title together, put through the same rule as one string. The id goes through it too, since `/iwol:start <branch>` puts the whole description through the rule again and has to land on the same name: a dotted id such as `proj-a1b2.1.3` becomes `proj-a1b2-1-3`, and the 40-character cut applies to the id and the title together. Example: bead `proj-a1b2.1.3` "Add the export button" becomes `feat/proj-a1b2-1-3-add-the-export-button`.
+- **A bead:** `<description>` is `<bead-id> <title>`, the id and the bead's title together, put through the same rule as one string. The id goes through it too, since `/iwol:implement <branch>` puts the whole description through the rule again and has to land on the same name: a dotted id such as `proj-a1b2.1.3` becomes `proj-a1b2-1-3`, and the 40-character cut applies to the id and the title together. Example: bead `proj-a1b2.1.3` "Add the export button" becomes `feat/proj-a1b2-1-3-add-the-export-button`.
 
 State the branch and the worktree in one line, so the user can correct them, but don't wait for a yes.
 
@@ -45,7 +45,7 @@ Do the work inside the worktree, and only the task. If it turns out to need a de
 
 1. Run the config's `Format:` command (skip it when it's `none`), then its `Full check:`, and report the result.
 2. **If the check fails,** show what failed and stop. Fix it within the task if the user asks; commit with the check still failing only if the user says so.
-3. Stage the task's files by name (never `git add -A` or `git add .`, and never a path in Files to leave alone) and commit on `<branch>`, with a message written as create-pr's *Branch and commit naming* says for the config's `PR title format:`. Never push.
+3. Stage the task's files by name (never `git add -A` or `git add .`, and never a path in Files to leave alone) and commit on `<branch>`, with a message written as `/iwol:ship`'s *Branch and commit naming* says for the config's `PR title format:`. Never push.
 
 ## Step 6 — Leave and remove the worktree
 
@@ -62,10 +62,10 @@ Tell the user, from what Step 6 collected and without running another command:
 - The branch, and what's on it (the log from Step 6).
 - The Full check result, and, if the commit went in with it failing, that it did.
 - Whether the worktree was removed, or why it was kept.
-- How to pick the branch up: `/iwol:start` in a later session gives it a worktree again (its Step 2 offers to pick up a branch that exists but isn't checked out), and `/iwol:create-pr` run there ships it. Give the command in a `text` block with the real branch:
+- How to pick the branch up: `/iwol:implement` in a later session gives it a worktree again (its Step 2 offers to pick up a branch that exists but isn't checked out), and `/iwol:ship` run there ships it. Give the command in a `text` block with the real branch:
 
   ```text
-  /iwol:start <branch>
+  /iwol:implement <branch>
   ```
 
   To look at it or carry on by hand instead, the user switches to the branch in the main checkout. Give that in a `text` block too, with the real branch: a `bash` block's Run button would switch the session's own folder, not the main checkout.
@@ -74,11 +74,11 @@ Tell the user, from what Step 6 collected and without running another command:
   git switch <branch>
   ```
 
-  create-pr opens a PR from the branch's commits only in the worktree `/iwol:start` made for it.
+  `/iwol:ship` opens a PR from the branch's commits only in the worktree `/iwol:implement` made for it.
 
 ## Non-goals
 
-- Never push, and never open a PR. That's `/iwol:create-pr`.
+- Never push, and never open a PR. That's `/iwol:ship`.
 - Never switch the main checkout's branch or change its files, nor those of the folder the session started in.
 - Never rename the session.
 - Don't claim, update or close the bead. The hand-off names its branch; the bead's status is the user's call.

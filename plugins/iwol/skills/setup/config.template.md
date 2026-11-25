@@ -103,7 +103,7 @@ gh run view "${run%% *}" --json jobs --jq '.jobs[] | "\(.name): \(.status)"'
 
 - **Base branch:** `<main>`. The skills use it wherever they say `main`.
 - **Worktrees:** `.claude/worktrees/`, which must be listed in the tracked `.gitignore` so fresh clones ignore it too.
-- **Worktree setup:** `<where preparing a new worktree (installing dependencies, copying env files, generating code) is documented, e.g. AGENTS.md § Worktrees, or "none">`. `/iwol:start` and `/iwol:beads-implement` follow it in each worktree they create. Clean-up needs no pointer: `/iwol:create-pr` removes a merged PR's worktree itself.
+- **Worktree setup:** `<where preparing a new worktree (installing dependencies, copying env files, generating code) is documented, e.g. AGENTS.md § Worktrees, or "none">`. `/iwol:implement` and `/iwol:beads-implement` follow it in each worktree they create. Clean-up needs no pointer: `/iwol:ship` removes a merged PR's worktree itself.
 - **Merge method:** `<merge | squash>`. Then, on the same line:
   - for `merge`, the merge commit's subject and body format: `<format>`;
   - for `squash`, either "GitHub deletes the branch on merge" or "the skill passes `--delete-branch`".
