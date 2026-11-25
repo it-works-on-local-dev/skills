@@ -19,7 +19,7 @@ If no epic ID is present in the conversation or command args, **stop immediately
 
 If the ID doesn't resolve to a real bead, say so and stop.
 
-The test runs the code in this session's folder, so for a wave's sub-epic whose branch still exists (`git branch --list 'feature/<sub-epic-id>-*'`), move into the worktree that holds it, where `/iwol:beads-implement` checked it out, as *Entering one* in `../start/worktrees.md` says. Do it before reading any git state, unless this session is already there. A wave started before waves had their own worktrees may be in the main checkout; *Entering one* then stops and tells the user to run from there.
+The test runs the code in this session's folder, so for a wave's sub-epic whose branch still exists (`git branch --list 'feature/<sub-epic-id>-*'`), move into the worktree that holds it, where `/iwol:beads-implement` checked it out, as *Entering one* in `../implement/worktrees.md` says. Do it before reading any git state, unless this session is already there. A wave started before waves had their own worktrees may be in the main checkout; *Entering one* then stops and tells the user to run from there.
 
 ## Step 1 — Gather the epic's actual scope
 

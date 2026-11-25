@@ -1,9 +1,9 @@
 ---
-name: create-pr
-description: 'Branch off the base branch, commit the current Claude session''s changes, push, and open a PR against it (draft by default) — or, if the current branch already has an open PR, push follow-up commits to it. Also waits for CI, runs the Claude review loop, marks drafts ready for review, and merges the PR and cleans up its branch the way the repository''s iwol config says. Use when the user asks to "ship this", "open a PR", "create a PR against main", "draft a PR", "add this to the PR", "push more commits to this PR", "mark the PR ready", or "merge the PR", or otherwise wants the session''s changes turned into (or added to, promoted out of draft in, or merged as) a pull request targeting the base branch. For releasing to production (merging the Release PR), use /iwol:create-release instead.'
+name: ship
+description: 'Branch off the base branch, commit the current Claude session''s changes, push, and open a PR against it (draft by default) — or, if the current branch already has an open PR, push follow-up commits to it. Also waits for CI, runs the Claude review loop, marks drafts ready for review, and merges the PR and cleans up its branch the way the repository''s iwol config says. Use when the user runs /iwol:ship, or asks to "ship this", "open a PR", "create a PR against main", "draft a PR", "add this to the PR", "push more commits to this PR", "mark the PR ready", or "merge the PR", or otherwise wants the session''s changes turned into (or added to, promoted out of draft in, or merged as) a pull request targeting the base branch. For releasing to production (merging the Release PR), use /iwol:create-release instead. For a Beads wave''s PRs, use /iwol:beads-ship.'
 ---
 
-# /iwol:create-pr
+# /iwol:ship
 
 Turn this session's changes into one or more PRs against the base branch. It's the only long-lived branch, so every PR targets it.
 
@@ -90,9 +90,9 @@ Green CI is policy, not something GitHub enforces: GitHub's Free plan can't make
 
    Uncommitted changes carry over; confirm with `git status`. Files for another PR stay uncommitted until that PR's branch. If the changes are already committed on another local branch, cherry-pick or apply them instead.
 
-   **On the branch of a worktree `/iwol:start` made**, open the first PR from it as it is and skip the commands above. It's that branch when all of these hold, and otherwise branch from `origin/main` as above:
+   **On the branch of a worktree `/iwol:implement` made**, open the first PR from it as it is and skip the commands above. It's that branch when all of these hold, and otherwise branch from `origin/main` as above:
    - the current branch is `<prefix>/<description>` with a prefix from [Branch and commit naming](#branch-and-commit-naming);
-   - this session is in that branch's own worktree: `git rev-parse --show-toplevel` is `.claude/worktrees/<prefix>-<description>` in the main checkout (see *Names* in `../start/worktrees.md`);
+   - this session is in that branch's own worktree: `git rev-parse --show-toplevel` is `.claude/worktrees/<prefix>-<description>` in the main checkout (see *Names* in `../implement/worktrees.md`);
    - no PR, open or closed, has used the branch yet (`gh pr list --head <branch> --state all --json number` prints `[]`).
 
    Its commits go into the PR along with the uncommitted changes, and an earlier session for the same work may have made some, so list them with step 1's files (`git fetch origin main`, then `git log --oneline origin/main..HEAD`), and ask about any this session didn't make. Keep the branch's name even if another prefix would now fit the changes better: the worktree is named after it. Any further PR from this session branches from `origin/main` as above.
@@ -361,7 +361,7 @@ Everything else waits for the user: open findings, an all-declined round, a stop
       - An error from any of these isn't an empty result: report it and delete nothing.
 
       If `git status` lists anything, or the log lists commits on the PR's branch, delete nothing: report each file and commit, tell the user the worktree and its branches are still there, and stop. If only the session's branch has commits, keep that branch, report them, and go on without it.
-   3. **Remove them** as *Leaving and removing one* in `../start/worktrees.md` says. First, inside the worktree, note its path (`git rev-parse --show-toplevel`), then run each as its own command:
+   3. **Remove them** as *Leaving and removing one* in `../implement/worktrees.md` says. First, inside the worktree, note its path (`git rev-parse --show-toplevel`), then run each as its own command:
 
       ```
       git switch --detach origin/main
@@ -371,7 +371,7 @@ Everything else waits for the user: open findings, an all-declined round, a stop
       Delete the branches here, not after leaving: once a branch's upstream is gone, `git branch -d` checks it against the current `HEAD`, which is `origin/main` only inside this worktree. **Under `squash`**, delete the PR's branch with `git branch -D`: git never sees a squash-merged branch as merged, and step 2's log stands in for its check. If git refuses to delete a branch, keep it and report why.
 
       Then call `ExitWorktree` with `action: "keep"` (load it with ToolSearch if it's deferred), never `"remove"`:
-      - **If it moved the session** (this session entered the worktree with `EnterWorktree`, as `/iwol:start` does), run `git worktree remove "<path>"` from the folder it's back in. Don't run the local steps above there, even when it's the main checkout: its branch and files are the user's. Tell the user the worktree is gone and the session is back in that folder.
+      - **If it moved the session** (this session entered the worktree with `EnterWorktree`, as `/iwol:implement` does), run `git worktree remove "<path>"` from the folder it's back in. Don't run the local steps above there, even when it's the main checkout: its branch and files are the user's. Tell the user the worktree is gone and the session is back in that folder.
       - **If it reports that no worktree session is active** (the session started in this worktree, as in a desktop app session, or entered it before a restart), run `git worktree remove "$(git rev-parse --show-toplevel)"`. It deletes this session's working directory, so run it last and run nothing in this session after it. Tell the user the worktree is gone and the session can be closed.
 
       Never add `--force` to `git worktree remove`: without it, git still refuses if anything uncommitted appeared since step 2. If it refuses, keep the worktree, and report what `git -C "<path>" status --short` lists.

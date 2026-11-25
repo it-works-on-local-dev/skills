@@ -1,11 +1,11 @@
 ---
 name: digest-plan
-description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before the plan is built, by /iwol:beads-decompose-plan as beads or by /iwol:start as one PR. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:digest-plan the plan we just built".
+description: Compress an implementation plan into the few things the user needs to know before approving it — outcome, blast radius, decisions, risks, verification, go/no-go. Normally runs right after /iwol:grill-me, on the plan grilling just produced, and before the plan is built, by /iwol:beads-decompose-plan as beads or by /iwol:implement as one PR. Use when the user wants a plan summarised, a TL;DR of a plan, "just tell me what this does", "digest this plan", or "/iwol:digest-plan the plan we just built".
 ---
 
 # /iwol:digest-plan
 
-Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan then goes on to `/iwol:beads-decompose-plan` (waves of beads) or `/iwol:start` (one PR), so the digest is the go/no-go before building.
+Compress the plan into a digest the user can read in under a minute. The user should never have to read the full plan to know what it does, what it touches, where the risk is, and whether to approve it. In this plugin the plan then goes on to `/iwol:beads-decompose-plan` (waves of beads) or `/iwol:implement` (one PR), so the digest is the go/no-go before building.
 
 Order by importance, most load-bearing first. Assume the user reads top-to-bottom and stops the moment they are satisfied.
 
@@ -15,7 +15,7 @@ Plans may touch backend, infrastructure, data, cloud, networking, CI/CD, or othe
 
 "The plan we just built" means the plan produced earlier in this session, normally by `/iwol:grill-me`. Look for it in this order, and do not ask the user to paste it:
 
-1. The file `/iwol:grill-me` wrote in this session, `<main checkout>/plans/<slug>.md` (`<main checkout>` as `../start/worktrees.md` defines it), whose absolute path it named. Read and edit it at that path: in a worktree session, a bare `plans/<slug>.md` points into the worktree, not at the file the hand-off builds.
+1. The file `/iwol:grill-me` wrote in this session, `<main checkout>/plans/<slug>.md` (`<main checkout>` as `../implement/worktrees.md` defines it), whose absolute path it named. Read and edit it at that path: in a worktree session, a bare `plans/<slug>.md` points into the worktree, not at the file the hand-off builds.
 2. A file the user points at, such as `docs/rfc.md`, wherever it is.
 3. Failing both, the plan in the conversation.
 
@@ -121,12 +121,12 @@ The verdict line is the digest's last line. Only "approve as-is" is followed by 
 
 "Inspect <thing> first" and "do not approve yet" end with the verdict line alone: the verdict already names what to look at, and a Copy button under a warning invites pasting past it. When the user later says the flagged item is settled, edit the plan file to match, asking first when it's a file `/iwol:grill-me` didn't write, such as one the user pointed at. Then re-check the plan and give a new verdict line: settling the item the verdict named doesn't make the plan approvable by itself. Give the command as below only if the new verdict is "approve as-is".
 
-**Pick the route.** Use the one the plan's *How it ships* section states. If the plan doesn't state one, pick by your Size rating: trivial or contained goes to `/iwol:start`, significant or sprawling to `/iwol:beads-decompose-plan`. Then say in the lead-in that you picked by size, and name the other route in prose after the block. Give one block, never both.
+**Pick the route.** Use the one the plan's *How it ships* section states. If the plan doesn't state one, pick by your Size rating: trivial or contained goes to `/iwol:implement`, significant or sprawling to `/iwol:beads-decompose-plan`. Then say in the lead-in that you picked by size, and name the other route in prose after the block. Give one block, never both.
 
 **Give the command** as the lead-in "Next, in a new session started in the main checkout:" and the command in a `text` block with the real path. For one PR:
 
 ```text
-/iwol:start plans/<slug>.md
+/iwol:implement plans/<slug>.md
 ```
 
 For waves of beads:
