@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0](https://github.com/it-works-on-local-dev/skills/compare/v2.0.0...v2.1.0) (2026-11-26)
+
+
+### Features
+
+* have implement start without asking for names, and count every beads-ship run ([#65](https://github.com/it-works-on-local-dev/skills/issues/65)) ([491cf9d](https://github.com/it-works-on-local-dev/skills/commit/491cf9db776f5af2f0a6fb111d7ef91559899c2a))
+* rename start to implement and create-pr to ship ([#63](https://github.com/it-works-on-local-dev/skills/issues/63)) ([1436ec3](https://github.com/it-works-on-local-dev/skills/commit/1436ec388cb077301e73c08400017b3a7caea066))
+
 ## [2.0.0](https://github.com/it-works-on-local-dev/skills/compare/v1.8.0...v2.0.0) (2026-11-24)
 
 
