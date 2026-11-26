@@ -62,7 +62,7 @@ Tell the user, from what Step 6 collected and without running another command:
 - The branch, and what's on it (the log from Step 6).
 - The Full check result, and, if the commit went in with it failing, that it did.
 - Whether the worktree was removed, or why it was kept.
-- How to pick the branch up: `/iwol:implement` in a later session gives it a worktree again (its Step 2 offers to pick up a branch that exists but isn't checked out), and `/iwol:ship` run there ships it. Give the command in a `text` block with the real branch:
+- How to pick the branch up: `/iwol:implement` in a later session gives it a worktree again (its Step 2 picks up a branch that exists but isn't checked out and, since it has commits, reports what's there and waits), and `/iwol:ship` run there ships it. Give the command in a `text` block with the real branch:
 
   ```text
   /iwol:implement <branch>
