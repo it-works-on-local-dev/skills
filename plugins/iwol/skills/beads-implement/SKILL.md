@@ -35,7 +35,7 @@ Load the bead and check what kind of node it is:
 
 Waves run strictly in order, and a wave is finished only when every bead's PR has merged and its sub-epic is closed. If an earlier sub-epic of the same epic isn't closed yet, stop and say which one: its PRs probably haven't all merged.
 
-Then name the session `[<id>] implementation`, where `<id>` is the ID this run was given: the sub-epic, or a leaf bead. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. Fix mode doesn't rename: it runs inside a `/iwol:beads-ship` session, which keeps its own name.
+Then name the session `[<id>] implement`, where `<id>` is the ID this run was given: the sub-epic, or a leaf bead. Rename it with the Claude desktop app's session-title tool (`set_session_title` with the session `self`; load it with ToolSearch if it's deferred). Where there's no such tool, as in the CLI, skip the rename without mentioning it. If the app asks the user to approve the new title, because they named the session themselves, leave it to them. Fix mode doesn't rename: it runs inside a `/iwol:beads-ship` session, which keeps its own name.
 
 Every wave runs in its own worktree, named as in *Branch and worktree names* below, wherever the session started; the main checkout's branch is never switched. Create, enter and prepare it as `../implement/worktrees.md` says (read it first), before dispatching anything. For a leaf bead, use its sub-epic's branch and worktree.
 
