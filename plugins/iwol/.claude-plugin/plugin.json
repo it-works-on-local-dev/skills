@@ -1,6 +1,6 @@
 {
   "name": "iwol",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Claude Code skills, worker agents and an output style: the beads workflow, grill-me and digest-plan, run-side-quest, the PR and release flows, and the ADHD output style.",
   "author": {
     "name": "it-works-on-local-dev"
