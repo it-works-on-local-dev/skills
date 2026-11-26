@@ -98,7 +98,7 @@ In the Claude desktop app, the bead skills name their session after the bead the
 | `/iwol:beads-decompose-plan` | `[<epic id>] decompose` |
 | `/iwol:beads-implement` | `[<id>] implement`, for the sub-epic or leaf bead it was given; a fix round runs inside a `/iwol:beads-ship` session and keeps that session's name |
 | `/iwol:beads-summarize-and-test` | `[<id>] summarize and test`, or `[<id>] summarize and test-<group>` for one group of a split test |
-| `/iwol:beads-ship` | `[<sub-epic id>] ship-<n>` for the wave's nth run, counted by the `Ship session <n>` comments each run adds to the sub-epic; a session that runs it again, by the command or by `here`, takes the new run's number |
+| `/iwol:beads-ship` | `[<sub-epic id>] ship-<n>` for the wave's nth run, counted by the `Ship session <n>` comments each run adds to the sub-epic; a session that runs it again, by the command, by asking for it in words or by `here`, takes the new run's number |
 
 ### Worktrees
 
