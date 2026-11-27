@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/it-works-on-local-dev/skills/compare/v2.1.0...v2.1.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* name the summarize-and-test session only once the plan is built ([#66](https://github.com/it-works-on-local-dev/skills/issues/66)) ([d9229a1](https://github.com/it-works-on-local-dev/skills/commit/d9229a169921fd8b65090bbd024539415e48296a))
+
 ## [2.1.0](https://github.com/it-works-on-local-dev/skills/compare/v2.0.0...v2.1.0) (2026-11-26)
 
 
